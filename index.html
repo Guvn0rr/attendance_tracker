@@ -113,6 +113,19 @@ input:focus,select:focus{border-color:#1a73e8}
 .tt-change-row{background:var(--row);border-radius:8px;padding:10px 12px;margin-bottom:8px;border:1px solid var(--border);font-size:13px}
 .tt-change-row .ttr-top{display:flex;justify-content:space-between;align-items:center}
 .time-chip{font-size:11px;color:var(--muted);margin-top:2px}
+/* course catalogue */
+.cat-row{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:7px;border:1px solid var(--border);background:var(--row);margin-bottom:5px}
+.cat-row input[type=text]{flex:1;min-width:0}
+.upload-box{border:2px dashed var(--inpb);border-radius:10px;padding:18px 12px;text-align:center;cursor:pointer;margin-bottom:10px;transition:border-color .2s}
+.upload-box:hover,.upload-box.drag{border-color:#1a73e8}
+.upload-box .ub-icon{font-size:28px;margin-bottom:6px}
+.upload-box .ub-txt{font-size:13px;color:var(--muted)}
+.upload-box .ub-hint{font-size:11px;color:var(--faint);margin-top:3px}
+.preview-table{width:100%;border-collapse:collapse;font-size:12px;margin-top:8px}
+.preview-table th{background:var(--stat);padding:5px 7px;text-align:left;font-weight:600;color:var(--sub);border-bottom:1px solid var(--border)}
+.preview-table td{padding:5px 7px;border-bottom:1px solid var(--border);color:var(--text)}
+.preview-table tr:last-child td{border-bottom:none}
+.badge-day{display:inline-block;font-size:10px;font-weight:700;padding:1px 5px;border-radius:4px;background:var(--stat);color:#1a73e8;margin:1px}
 </style>
 </head>
 <body>
@@ -172,6 +185,44 @@ input:focus,select:focus{border-color:#1a73e8}
 
   <div id="start-err" class="err hidden"></div>
   <button class="btn btn-green" id="btn-start">Start tracking →</button>
+
+  <!-- ─── COURSE CATALOGUE ─── -->
+  <div class="card">
+    <h2>📋 Course catalogue <span style="font-size:12px;font-weight:400;color:var(--muted)">(optional)</span></h2>
+    <p style="font-size:12px;color:var(--muted);margin:0 0 10px;line-height:1.5">Save course codes + names so you can pick them quickly when adding subjects. These are stored locally and never uploaded.</p>
+    <div id="cat-list"></div>
+    <div class="cat-row" id="cat-new-row" style="margin-top:6px">
+      <input type="text" id="cat-code-inp" placeholder="Course code e.g. CO2221" style="max-width:130px;flex:none">
+      <input type="text" id="cat-name-inp" placeholder="Course name">
+      <button class="btn btn-outline btn-sm" style="margin:0;flex:none;white-space:nowrap" onclick="addCatEntry()">+ Add</button>
+    </div>
+    <div id="cat-err" class="err hidden"></div>
+    <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-grey btn-sm" style="margin:0" onclick="loadCatToForm()">↙ Use selected in subject form</button>
+      <button class="btn btn-grey btn-sm" style="margin:0" onclick="exportCatalogue()">💾 Export catalogue</button>
+      <label class="btn btn-grey btn-sm" style="margin:0;cursor:pointer">📂 Import catalogue<input type="file" accept=".json,.csv" style="display:none" onchange="importCatalogue(this)"></label>
+    </div>
+  </div>
+
+  <!-- ─── TIMETABLE UPLOAD ─── -->
+  <div class="card">
+    <h2>📅 Upload timetable <span style="font-size:12px;font-weight:400;color:var(--muted)">(auto-setup)</span></h2>
+    <p style="font-size:12px;color:var(--muted);margin:0 0 10px;line-height:1.5">Upload a CSV or JSON file and all subjects will be created automatically. Download a template below to get started.</p>
+    <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+      <button class="btn btn-grey btn-sm" style="margin:0" onclick="downloadTTTemplate('csv')">⬇ CSV template</button>
+      <button class="btn btn-grey btn-sm" style="margin:0" onclick="downloadTTTemplate('json')">⬇ JSON template</button>
+    </div>
+    <div class="upload-box" id="tt-drop-zone" onclick="document.getElementById('tt-file-inp').click()">
+      <div class="ub-icon">📁</div>
+      <div class="ub-txt">Tap to choose file, or drag & drop</div>
+      <div class="ub-hint">Accepts .csv or .json</div>
+      <input type="file" id="tt-file-inp" accept=".csv,.json" style="display:none" onchange="handleTTFile(this.files[0])">
+    </div>
+    <div id="tt-preview"></div>
+    <div id="tt-err" class="err hidden"></div>
+    <button class="btn btn-green hidden" id="btn-apply-tt" onclick="applyTimetable()">✓ Apply timetable & add subjects</button>
+  </div>
+
 </div>
 
 <!-- ═══════════════ MAIN PAGE ═══════════════ -->
@@ -822,6 +873,7 @@ function goSetup(){
   document.getElementById('btn-start').textContent='Save & continue →';
   document.getElementById('setup-note').textContent='Editing your setup — tap "Save & continue" when done.';
   renderSubjList();
+  renderCatalogue();
 }
 
 function resetAll(){
@@ -1036,9 +1088,286 @@ if('serviceWorker' in navigator){
 }
 
 // ═══════════════════════════════════════════
-// INIT
+// COURSE CATALOGUE
 // ═══════════════════════════════════════════
+var CAT_SK = 'ltr_catalogue';
+var catalogue = []; // [{code, name}]
+
+function loadCatalogue(){
+  try{ var r=localStorage.getItem(CAT_SK); if(r) catalogue=JSON.parse(r); } catch(e){ catalogue=[]; }
+}
+function saveCatalogue(){ try{ localStorage.setItem(CAT_SK,JSON.stringify(catalogue)); } catch(e){} }
+
+function renderCatalogue(){
+  var el=document.getElementById('cat-list');
+  if(!el) return;
+  if(!catalogue.length){ el.innerHTML='<p style="font-size:12px;color:var(--muted);margin:0 0 6px">No courses saved yet.</p>'; return; }
+  el.innerHTML=catalogue.map(function(c,i){
+    return '<div class="cat-row" id="cat-'+i+'">'
+      +'<input type="checkbox" id="cat-chk-'+i+'" style="flex:none;width:16px;height:16px;cursor:pointer">'
+      +'<span style="font-weight:700;font-size:13px;min-width:70px;color:var(--text)">'+esc(c.code)+'</span>'
+      +'<span style="font-size:12px;color:var(--muted);flex:1">'+esc(c.name)+'</span>'
+      +'<button class="btn btn-red btn-sm" style="flex:none;padding:4px 8px;margin:0;font-size:11px" onclick="delCatEntry('+i+')">✕</button>'
+      +'</div>';
+  }).join('');
+}
+
+function addCatEntry(){
+  var code=document.getElementById('cat-code-inp').value.trim().toUpperCase();
+  var name=document.getElementById('cat-name-inp').value.trim();
+  if(!code){ showErr('cat-err','Enter a course code.'); return; }
+  if(catalogue.find(function(c){ return c.code===code; })){ showErr('cat-err','Course code already in catalogue.'); return; }
+  clearErr('cat-err');
+  catalogue.push({code:code,name:name});
+  saveCatalogue();
+  document.getElementById('cat-code-inp').value='';
+  document.getElementById('cat-name-inp').value='';
+  renderCatalogue();
+}
+
+function delCatEntry(i){
+  catalogue.splice(i,1);
+  saveCatalogue();
+  renderCatalogue();
+}
+
+function loadCatToForm(){
+  var checked=catalogue.filter(function(_,i){
+    var el=document.getElementById('cat-chk-'+i);
+    return el&&el.checked;
+  });
+  if(!checked.length){ alert('Tick at least one course in the catalogue first.'); return; }
+  if(checked.length===1){
+    document.getElementById('inp-code').value=checked[0].code;
+    document.getElementById('inp-name').value=checked[0].name||'';
+    document.getElementById('inp-code').focus();
+    window.scrollTo({top:0,behavior:'smooth'});
+  } else {
+    // bulk-add all checked with no days — user picks days individually
+    var added=0;
+    checked.forEach(function(c){
+      if(db.subjects.find(function(s){ return s.code===c.code; })) return;
+      // We can't auto-pick days so we set code/name and let user pick days. For bulk just pre-fill one at a time is confusing; instead we prompt
+    });
+    // Just prefill first and inform
+    document.getElementById('inp-code').value=checked[0].code;
+    document.getElementById('inp-name').value=checked[0].name||'';
+    alert('First subject pre-filled. Select days & times, click "+ Add subject", then repeat for the rest.\n\nTip: Use the timetable upload to add multiple subjects at once automatically.');
+    window.scrollTo({top:0,behavior:'smooth'});
+  }
+}
+
+function exportCatalogue(){
+  if(!catalogue.length){ alert('Catalogue is empty.'); return; }
+  var json=JSON.stringify(catalogue,null,2);
+  var a=document.createElement('a');
+  a.href='data:application/json;charset=utf-8,'+encodeURIComponent(json);
+  a.download='course_catalogue.json';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+}
+
+function importCatalogue(inp){
+  var file=inp.files[0]; if(!file) return;
+  var r=new FileReader();
+  r.onload=function(e){
+    try{
+      var data;
+      if(file.name.endsWith('.json')){ data=JSON.parse(e.target.result); }
+      else {
+        // CSV: code,name
+        data=e.target.result.trim().split('\n').slice(1).map(function(row){
+          var cols=row.split(',');
+          return {code:(cols[0]||'').trim().toUpperCase(),name:(cols[1]||'').trim()};
+        }).filter(function(c){ return c.code; });
+      }
+      var added=0;
+      data.forEach(function(c){
+        if(c.code && !catalogue.find(function(x){ return x.code===c.code; })){
+          catalogue.push({code:c.code,name:c.name||''}); added++;
+        }
+      });
+      saveCatalogue(); renderCatalogue();
+      alert('Imported '+added+' course(s) into catalogue.');
+    } catch(err){ alert('Could not parse file: '+err.message); }
+  };
+  r.readAsText(file);
+  inp.value='';
+}
+
+// ═══════════════════════════════════════════
+// TIMETABLE UPLOAD
+// ═══════════════════════════════════════════
+var _ttParsed = []; // [{code,name,hours,days:[],times:{}}]
+
+// Drag & drop
+(function(){
+  var zone=document.getElementById('tt-drop-zone');
+  if(!zone) return;
+  zone.addEventListener('dragover',function(e){ e.preventDefault(); zone.classList.add('drag'); });
+  zone.addEventListener('dragleave',function(){ zone.classList.remove('drag'); });
+  zone.addEventListener('drop',function(e){
+    e.preventDefault(); zone.classList.remove('drag');
+    var f=e.dataTransfer.files[0]; if(f) handleTTFile(f);
+  });
+})();
+
+function handleTTFile(file){
+  if(!file) return;
+  var r=new FileReader();
+  r.onload=function(e){ parseTTFile(file.name, e.target.result); };
+  r.readAsText(file);
+  document.getElementById('tt-file-inp').value='';
+}
+
+function parseTTFile(name, text){
+  clearErr('tt-err');
+  document.getElementById('tt-preview').innerHTML='';
+  document.getElementById('btn-apply-tt').classList.add('hidden');
+  _ttParsed=[];
+
+  try{
+    var rows=[];
+    if(name.toLowerCase().endsWith('.json')){
+      var data=JSON.parse(text);
+      if(!Array.isArray(data)) throw new Error('JSON must be an array of objects.');
+      rows=data;
+    } else {
+      // CSV parse
+      var lines=text.trim().split('\n');
+      if(lines.length<2) throw new Error('CSV must have a header row and at least one data row.');
+      var headers=lines[0].split(',').map(function(h){ return h.trim().toLowerCase().replace(/"/g,''); });
+      rows=lines.slice(1).map(function(line){
+        var cols=splitCSVRow(line);
+        var obj={};
+        headers.forEach(function(h,i){ obj[h]=cols[i]?cols[i].trim().replace(/^"|"$/g,''):''; });
+        return obj;
+      }).filter(function(r){ return r.code||r['subject code']||r['course code']; });
+    }
+
+    if(!rows.length) throw new Error('No data rows found.');
+
+    rows.forEach(function(row){
+      var code=(row.code||row['subject code']||row['course code']||'').trim().toUpperCase();
+      if(!code) return;
+      var subj_name=row.name||row['subject name']||row['course name']||'';
+      var hours=parseFloat(row.hours||row['credit hours']||row['hrs']||2)||2;
+      // days: accept comma-separated string or separate Mon/Tue… boolean columns
+      var daysRaw=row.days||row.day||'';
+      var days=[];
+      if(daysRaw){
+        days=daysRaw.split(/[,;\/\s]+/).map(function(d){ return normDay(d); }).filter(Boolean);
+      } else {
+        DAYS.forEach(function(d){
+          var val=row[d.toLowerCase()]||row[d]||'';
+          if(val&&val!=='0'&&val.toLowerCase()!=='false'&&val.toLowerCase()!=='no') days.push(d);
+        });
+      }
+      if(!days.length) return; // skip rows with no days
+
+      var times={};
+      days.forEach(function(d){
+        var startKey=d.toLowerCase()+'_start';
+        var endKey=d.toLowerCase()+'_end';
+        var singleKey=d.toLowerCase()+'_time';
+        var startV=row[startKey]||row['start']||row['start_time']||'';
+        var endV=row[endKey]||row['end']||row['end_time']||'';
+        var singleV=row[singleKey]||'';
+        if(singleV&&!startV){
+          var parts=singleV.split(/[-–]/);
+          startV=parts[0]?parts[0].trim():''; endV=parts[1]?parts[1].trim():'';
+        }
+        if(startV||endV) times[d]={start:startV,end:endV};
+      });
+
+      _ttParsed.push({code:code,name:subj_name,hours:hours,days:days,times:times});
+    });
+
+    if(!_ttParsed.length) throw new Error('Could not find any valid subjects. Check your column names match the template.');
+
+    // show preview table
+    var h='<p style="font-size:12px;color:#1D9E75;font-weight:600;margin:8px 0 6px">✓ Found '+_ttParsed.length+' subject(s) — review below:</p>'
+      +'<div style="overflow-x:auto"><table class="preview-table"><thead><tr>'
+      +'<th>Code</th><th>Name</th><th>Hrs</th><th>Days</th><th>Times</th>'
+      +'</tr></thead><tbody>';
+    _ttParsed.forEach(function(s){
+      var timeStr=Object.keys(s.times).map(function(d){ return d+': '+(s.times[d].start||'')+(s.times[d].end?' – '+s.times[d].end:''); }).join(', ');
+      h+='<tr><td><b>'+esc(s.code)+'</b></td><td>'+esc(s.name)+'</td><td>'+s.hours+'</td>'
+        +'<td>'+s.days.map(function(d){ return '<span class="badge-day">'+d+'</span>'; }).join('')+'</td>'
+        +'<td style="font-size:11px;color:var(--muted)">'+esc(timeStr||'—')+'</td></tr>';
+    });
+    h+='</tbody></table></div>';
+    document.getElementById('tt-preview').innerHTML=h;
+    document.getElementById('btn-apply-tt').classList.remove('hidden');
+  } catch(err){
+    showErr('tt-err', '⚠ Parse error: '+err.message);
+  }
+}
+
+function normDay(s){
+  var m={mon:'Mon',tue:'Tue',wed:'Wed',thu:'Thu',fri:'Fri',
+         monday:'Mon',tuesday:'Tue',wednesday:'Wed',thursday:'Thu',friday:'Fri',
+         mo:'Mon',tu:'Tue',we:'Wed',th:'Thu',fr:'Fri'};
+  return m[(s||'').toLowerCase().trim()]||null;
+}
+
+function splitCSVRow(row){
+  var result=[],cur='',inQ=false;
+  for(var i=0;i<row.length;i++){
+    var ch=row[i];
+    if(ch==='"'){ inQ=!inQ; }
+    else if(ch===','&&!inQ){ result.push(cur); cur=''; }
+    else { cur+=ch; }
+  }
+  result.push(cur);
+  return result;
+}
+
+function applyTimetable(){
+  if(!_ttParsed.length) return;
+  var added=0, skipped=0;
+  _ttParsed.forEach(function(s){
+    if(db.subjects.find(function(x){ return x.code===s.code; })){ skipped++; return; }
+    db.subjects.push({id:Date.now()+Math.random(),code:s.code,name:s.name,hours:s.hours,days:s.days,times:s.times});
+    added++;
+    // also add to catalogue if not present
+    if(!catalogue.find(function(c){ return c.code===s.code; })){
+      catalogue.push({code:s.code,name:s.name});
+    }
+  });
+  saveCatalogue();
+  saveDB();
+  renderSubjList();
+  renderCatalogue();
+  document.getElementById('tt-preview').innerHTML='<p style="font-size:12px;color:#1D9E75;font-weight:600;margin:8px 0">✓ Added '+added+' subject(s)'+(skipped?' ('+skipped+' already existed, skipped)':'')+'.</p>';
+  document.getElementById('btn-apply-tt').classList.add('hidden');
+  _ttParsed=[];
+}
+
+function downloadTTTemplate(fmt){
+  var content, filename, type;
+  if(fmt==='csv'){
+    content='code,name,hours,days,start_time,end_time\n'
+      +'CO2221,Software Engineering,2,"Mon,Wed",08:00,10:00\n'
+      +'CO2212,Data Structures,2,"Tue,Thu",10:00,12:00\n'
+      +'CO2231,Computer Networks,2,Fri,13:00,15:00\n';
+    filename='timetable_template.csv'; type='text/csv';
+  } else {
+    content=JSON.stringify([
+      {code:'CO2221',name:'Software Engineering',hours:2,days:['Mon','Wed'],mon_start:'08:00',mon_end:'10:00',wed_start:'08:00',wed_end:'10:00'},
+      {code:'CO2212',name:'Data Structures',hours:2,days:['Tue','Thu'],tue_start:'10:00',tue_end:'12:00',thu_start:'10:00',thu_end:'12:00'},
+      {code:'CO2231',name:'Computer Networks',hours:2,days:['Fri'],fri_start:'13:00',fri_end:'15:00'}
+    ],null,2);
+    filename='timetable_template.json'; type='application/json';
+  }
+  var a=document.createElement('a');
+  a.href='data:'+type+';charset=utf-8,'+encodeURIComponent(content);
+  a.download=filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+}
+
+
 loadDB();
+loadCatalogue();
 try{ isDark=localStorage.getItem('ltr_theme')==='dark'; }catch(e){}
 applyTheme();
 
@@ -1046,6 +1375,7 @@ if(db.start && db.subjects.length){
   showMain();
 } else {
   renderSubjList();
+  renderCatalogue();
 }
 </script>
 </body>
