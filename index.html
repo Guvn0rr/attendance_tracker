@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Lecture Tracker</title>
+<title>Attendance Tracker</title>
 
 <!-- PWA -->
 <link rel="manifest" href="manifest.json">
@@ -120,19 +120,16 @@ input:focus,select:focus{border-color:#1a73e8}
 <!-- ═══════════════ SETUP PAGE ═══════════════ -->
 <div id="pg-setup">
   <div class="topbar">
-    <h1>📚 Lecture Tracker</h1>
+    <h1>📚 Attendance Tracker</h1>
     <button class="theme-btn" id="theme-btn-setup" onclick="toggleTheme()">🌙 Dark</button>
   </div>
 
-  <div class="setup-note" id="setup-note">
-    Set up once — the app will open directly to today after this.
-  </div>
 
   <div class="card">
     <h2>Semester details</h2>
-    <label>Start date <span style="color:#aaa;font-weight:400">(Monday of week 1)</span></label>
+    <label>Start date <span style="color:#aaa;font-weight:400"></span></label>
     <input type="date" id="inp-start">
-    <label>Number of weeks <span style="color:#aaa;font-weight:400">(optional, default 16)</span></label>
+    <label>Number of weeks <span style="color:#aaa;font-weight:400">(optional)</span></label>
     <input type="number" id="inp-weeks" value="16" min="1" max="60" style="max-width:110px">
   </div>
 
@@ -176,7 +173,7 @@ input:focus,select:focus{border-color:#1a73e8}
 <!-- ═══════════════ MAIN PAGE ═══════════════ -->
 <div id="pg-main" class="hidden">
   <div class="topbar">
-    <h1>📚 Lecture Tracker</h1>
+    <h1>📚 Attendance Tracker</h1>
     <button class="theme-btn" id="theme-btn-main" onclick="toggleTheme()">🌙 Dark</button>
   </div>
   <div class="tab-nav">
@@ -703,9 +700,9 @@ function renderSettings(){
   }
   h+='</div>';
 
-  // Danger zone
+  // Hard Reset
   h+='<div class="card" style="border-color:#e53935">'
-    +'<h3 style="color:#e53935">Danger zone</h3>'
+    +'<h3 style="color:#e53935">Reset</h3>'
     +'<button class="btn btn-red" onclick="resetAll()">Reset all data</button>'
     +'</div>';
 
