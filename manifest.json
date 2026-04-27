@@ -1,6 +1,6 @@
 {
-  "name": "Lecture Tracker",
-  "short_name": "LecTracker",
+  "name": "    Attendance Tracker",
+  "short_name": " Attendance Tracker",
   "description": "Track your lecture attendance throughout the semester",
   "start_url": "./index.html",
   "display": "standalone",
