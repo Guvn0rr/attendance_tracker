@@ -127,6 +127,1058 @@ input:focus,select:focus{border-color:#1a73e8}
 
   <div class="card">
     <h2>Semester details</h2>
+    <label>Start date <span style="color:#aaa;font-weight:400">(mm/dd/yyyy)</span></label>
+    <div style="display:flex;align-items:center;gap:6px;max-width:200px">
+      <input type="text" id="inp-start" placeholder="mm/dd/yyyy" maxlength="10" inputmode="numeric" style="flex:1;min-width:0">
+      <input type="date" id="inp-start-picker" style="position:absolute;opacity:0;width:0;height:0;pointer-events:none" tabindex="-1">
+      <button type="button" id="inp-start-cal" title="Pick a date" style="background:var(--row);border:1px solid var(--inpb);border-radius:7px;padding:7px 9px;cursor:pointer;font-size:15px;line-height:1;color:var(--text);flex-shrink:0">📅</button>
+    </div>
+    <label>Number of weeks <span style="color:#aaa;font-weight:400">(optional — how many weeks is your semester?)</span></label>
+    <input type="number" id="inp-weeks" value="0" min="0" max="60" style="max-width:110px">
+  </div>
+
+  <div class="card">
+    <h2>Add a subject</h2>
+    <div class="row2">
+      <div>
+        <label>Subject code</label>
+        <input type="text" id="inp-code" placeholder="CO2221">
+      </div>
+      <div>
+        <label>Hours</label>
+        <input type="number" id="inp-hrs" value="0" min="0" step="0.5">
+      </div>
+    </div>
+    <label>Subject name <span style="color:#aaa;font-weight:400">(optional)</span></label>
+    <input type="text" id="inp-name" placeholder="Software Engineering">
+    <label>Days — tap to select</label>
+    <div class="day-row">
+      <div class="day-btn" data-d="Mon">Mon</div>
+      <div class="day-btn" data-d="Tue">Tue</div>
+      <div class="day-btn" data-d="Wed">Wed</div>
+      <div class="day-btn" data-d="Thu">Thu</div>
+      <div class="day-btn" data-d="Fri">Fri</div>
+    </div>
+    <!-- Time slots per selected day -->
+    <div id="time-slots-wrap" class="hidden">
+      <label>Session times <span style="color:#aaa;font-weight:400">(optional)</span></label>
+      <div id="time-slots"></div>
+    </div>
+    <div id="add-err" class="err hidden"></div>
+    <button class="btn" id="btn-add-subj">+ Add subject</button>
+  </div>
+
+  <div id="subj-list"></div>
+
+  <div id="start-err" class="err hidden"></div>
+  <button class="btn btn-green" id="btn-start">Start tracking →</button>
+</div>
+
+<!-- ═══════════════ MAIN PAGE ═══════════════ -->
+<div id="pg-main" class="hidden">
+  <div class="topbar">
+    <h1>📚 Attendance Tracker</h1>
+    <button class="theme-btn" id="theme-btn-main" onclick="toggleTheme()">🌙 Dark</button>
+  </div>
+  <div class="tab-nav">
+    <div class="tab on" id="t-today" onclick="switchTab('today')">Today</div>
+    <div class="tab" id="t-week" onclick="switchTab('week')">Week</div>
+    <div class="tab" id="t-all" onclick="switchTab('all')">Subjects</div>
+    <div class="tab" id="t-settings" onclick="switchTab('settings')">⚙</div>
+  </div>
+  <div id="pg-today"></div>
+  <div id="pg-week" class="hidden"></div>
+  <div id="pg-all" class="hidden"></div>
+  <div id="pg-settings" class="hidden"></div>
+</div>
+
+<!-- ═══ MODAL: Add subject to today ═══ -->
+<div id="modal-add-today" class="overlay hidden">
+  <div class="sheet">
+    <button class="sheet-close" onclick="closeModal('modal-add-today')">×</button>
+    <h3 id="at-modal-title">Add subject to today</h3>
+    <label>Select subject</label>
+    <select id="at-subj"></select>
+    <label>Hours for this session</label>
+    <input type="number" id="at-hrs" value="2" min="0.5" step="0.5">
+    <div id="at-err" class="err hidden"></div>
+    <div style="display:flex;gap:8px;margin-top:14px">
+      <button class="btn btn-green" style="flex:1" onclick="confirmAddToday()">✓ Add</button>
+      <button class="btn btn-grey btn-sm" style="flex:1;padding:11px;margin-top:0" onclick="closeModal('modal-add-today')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODAL: Timetable change ═══ -->
+<div id="modal-tt-change" class="overlay hidden">
+  <div class="sheet">
+    <button class="sheet-close" onclick="closeModal('modal-tt-change')">×</button>
+    <h3>⚠ Timetable change</h3>
+    <p style="font-size:13px;color:var(--muted);margin:0 0 14px">Move a subject's session from one day to another. The change takes effect from a date you choose — all future sessions will follow the new day.</p>
+    <label>Subject</label>
+    <select id="ttc-subj" onchange="ttcSubjChange()"></select>
+    <label>Which session day to move</label>
+    <select id="ttc-from-day"></select>
+    <label>Move to day</label>
+    <div class="day-row" id="ttc-to-day-row">
+      <div class="day-btn" data-ttc="Mon">Mon</div>
+      <div class="day-btn" data-ttc="Tue">Tue</div>
+      <div class="day-btn" data-ttc="Wed">Wed</div>
+      <div class="day-btn" data-ttc="Thu">Thu</div>
+      <div class="day-btn" data-ttc="Fri">Fri</div>
+    </div>
+    <label>Effective from (first day of new schedule)</label>
+    <input type="date" id="ttc-date">
+    <label>New session time <span style="color:#aaa;font-weight:400">(optional)</span></label>
+    <div class="row2">
+      <div><label style="margin-top:4px">Start</label><input type="time" id="ttc-tstart"></div>
+      <div><label style="margin-top:4px">End</label><input type="time" id="ttc-tend"></div>
+    </div>
+    <div id="ttc-err" class="err hidden"></div>
+    <button class="btn btn-orange" onclick="confirmTTChange()" style="margin-top:14px">Apply timetable change</button>
+  </div>
+</div>
+
+<script>
+'use strict';
+// ═══════════════════════════════════════════
+// DATA
+// ═══════════════════════════════════════════
+var SK = 'ltr_v6';
+var db = {
+  start:'', weeks:16, subjects:[], records:{}, extra:{},
+  // ttChanges: [{subjId, fromDay, toDay, fromDate, newStart, newEnd}]
+  ttChanges:[]
+};
+var wkOff = 0, curTab = 'today', isDark = false;
+
+function loadDB(){
+  try{ var r=localStorage.getItem(SK); if(r){ db=JSON.parse(r); } } catch(e){}
+  if(!db.extra) db.extra={};
+  if(!db.ttChanges) db.ttChanges=[];
+}
+function saveDB(){ try{ localStorage.setItem(SK,JSON.stringify(db)); } catch(e){} }
+// restore sim date
+try{ _simDate=localStorage.getItem('ltr_simdate')||''; }catch(e){}
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function fmtH(h){ return (h%1===0?h:parseFloat(h).toFixed(1))+'h'; }
+
+var DAYS = ['Mon','Tue','Wed','Thu','Fri'];
+var DAYSFULL = ['Monday','Tuesday','Wednesday','Thursday','Friday'];
+
+function dStr(d){ var y=d.getFullYear(),m=d.getMonth()+1,day=d.getDate(); return y+'-'+(m<10?'0'+m:m)+'-'+(day<10?'0'+day:day); }
+function pDate(s){ var p=s.split('-'); return new Date(+p[0],+p[1]-1,+p[2]); }
+var _simDate='';
+function todayS(){ return _simDate||dStr(new Date()); }
+function setSimDate(val){
+  _simDate=val;
+  try{ localStorage.setItem('ltr_simdate',val); }catch(e){}
+  renderTab();
+  renderSimCard();
+}
+function renderSimCard(){
+  var el=document.getElementById('sim-date-display');
+  if(!el) return;
+  el.textContent=_simDate?('Simulating: '+fmtDL(_simDate)):'Using real date: '+fmtDL(dStr(new Date()));
+  el.style.color=_simDate?'#e65100':'var(--muted)';
+}
+function fmtD(s){ var d=pDate(s),m=d.getMonth()+1,day=d.getDate(); return (m<10?'0'+m:m)+'/'+(day<10?'0'+day:day); }
+function fmtDL(s){ var d=pDate(s),m=d.getMonth()+1,day=d.getDate(),y=d.getFullYear(); return (m<10?'0'+m:m)+'/'+(day<10?'0'+day:day)+'/'+y; }
+function getDow(s){ var d=pDate(s).getDay(); if(d===0||d===6) return null; return DAYS[d-1]; }
+function getWk(s){ if(!db.start) return null; var diff=Math.floor((pDate(s)-pDate(db.start))/(7*864e5)); if(diff<0||diff>=db.weeks) return null; return diff+1; }
+function rKey(id,s){ return id+'_'+s; }
+function getRec(id,s){ return db.records[rKey(id,s)]||''; }
+function setRec(id,s,v){ db.records[rKey(id,s)]=v; saveDB(); renderTab(); }
+
+// ═══ TIMETABLE CHANGE LOGIC ═══
+// Returns effective day for a subject session on a given date
+// (may have been moved by a ttChange)
+function effectiveDayFor(subj, originalDay, dateStr){
+  // find latest change for this subj+fromDay that is <= dateStr
+  var applicable = db.ttChanges.filter(function(c){
+    return c.subjId===subj.id && c.fromDay===originalDay && c.fromDate<=dateStr;
+  });
+  if(!applicable.length) return originalDay;
+  // last applied change
+  applicable.sort(function(a,b){ return a.fromDate>b.fromDate?-1:1; });
+  return applicable[0].toDay;
+}
+
+// For a given date, which subjects are "scheduled"? (accounting for moves)
+function subjsFor(dateStr){
+  var dow=getDow(dateStr);
+  if(!dow||!getWk(dateStr)) return [];
+  var result=[];
+  db.subjects.forEach(function(s){
+    s.days.forEach(function(origDay){
+      var effDay=effectiveDayFor(s,origDay,dateStr);
+      if(effDay===dow){
+        // find time
+        var time=getTimeFor(s,origDay,dateStr);
+        var wasMoved=origDay!==effDay;
+        result.push({subj:s, origDay:origDay, wasMoved:wasMoved, time:time});
+      }
+    });
+  });
+  return result;
+}
+
+function getTimeFor(subj, origDay, dateStr){
+  // check if a ttChange for this subj+origDay+dateStr has a new time
+  var applicable = db.ttChanges.filter(function(c){
+    return c.subjId===subj.id && c.fromDay===origDay && c.fromDate<=dateStr && (c.newStart||c.newEnd);
+  });
+  if(applicable.length){
+    applicable.sort(function(a,b){ return a.fromDate>b.fromDate?-1:1; });
+    var c=applicable[0];
+    if(c.newStart||c.newEnd) return {start:c.newStart,end:c.newEnd};
+  }
+  // original time from subject definition
+  if(subj.times && subj.times[origDay]) return subj.times[origDay];
+  return null;
+}
+
+function extraSubjsFor(dateStr){
+  if(!db.extra[dateStr]) return [];
+  return db.extra[dateStr].map(function(e){
+    var s=db.subjects.find(function(x){ return x.id===e.id; });
+    if(!s) return null;
+    return {subj:Object.assign({},s,{hours:e.hours}), origDay:null, wasMoved:false, time:null, isExtra:true};
+  }).filter(Boolean);
+}
+
+function allSessionsFor(dateStr){
+  return subjsFor(dateStr).concat(extraSubjsFor(dateStr));
+}
+
+function fmtTime(t){
+  if(!t||(!t.start&&!t.end)) return '';
+  var s=t.start||'', e=t.end||'';
+  if(s&&e) return s+' – '+e;
+  return s||e;
+}
+
+// ═══════════════════════════════════════════
+// THEME
+// ═══════════════════════════════════════════
+function toggleTheme(){ isDark=!isDark; applyTheme(); try{localStorage.setItem('ltr_theme',isDark?'dark':'light');}catch(e){} }
+function applyTheme(){
+  document.body.classList.toggle('dark',isDark);
+  var lbl=isDark?'☀️ Light':'🌙 Dark';
+  ['theme-btn-setup','theme-btn-main'].forEach(function(id){ var el=document.getElementById(id); if(el) el.textContent=lbl; });
+}
+
+// ═══════════════════════════════════════════
+// SETUP PAGE
+// ═══════════════════════════════════════════
+// Start date: text input auto-format + calendar picker sync
+document.getElementById('inp-start').addEventListener('input', function(){
+  var v=this.value.replace(/[^0-9]/g,'');
+  if(v.length>=3&&v.length<=4) v=v.slice(0,2)+'/'+v.slice(2);
+  else if(v.length>4) v=v.slice(0,2)+'/'+v.slice(2,4)+'/'+v.slice(4,8);
+  this.value=v;
+  // sync to hidden date picker when complete
+  if(v.length===10){
+    var p=v.split('/');
+    if(p.length===3&&p[2].length===4){
+      document.getElementById('inp-start-picker').value=p[2]+'-'+p[0]+'-'+p[1];
+    }
+  }
+});
+// Calendar icon opens native picker
+document.getElementById('inp-start-cal').addEventListener('click', function(){
+  var picker=document.getElementById('inp-start-picker');
+  picker.style.position='fixed';
+  picker.style.opacity='0';
+  picker.style.width='1px';
+  picker.style.height='1px';
+  picker.style.top='0';
+  picker.style.left='0';
+  picker.style.pointerEvents='auto';
+  picker.showPicker ? picker.showPicker() : picker.click();
+});
+document.getElementById('inp-start-picker').addEventListener('change', function(){
+  var v=this.value; // yyyy-mm-dd
+  if(v){
+    var p=v.split('-');
+    document.getElementById('inp-start').value=p[1]+'/'+p[2]+'/'+p[0];
+  }
+  this.style.position='absolute';
+  this.style.width='0';
+  this.style.height='0';
+  this.style.pointerEvents='none';
+});
+
+document.querySelectorAll('.day-btn[data-d]').forEach(function(el){
+  el.onclick=function(){
+    this.classList.toggle('active');
+    updateTimeSlots();
+  };
+});
+
+function updateTimeSlots(){
+  var activeDays=getSelectedSetupDays();
+  var wrap=document.getElementById('time-slots-wrap');
+  var container=document.getElementById('time-slots');
+  if(!activeDays.length){ wrap.classList.add('hidden'); return; }
+  wrap.classList.remove('hidden');
+  container.innerHTML=activeDays.map(function(d){
+    return '<div style="display:flex;align-items:center;gap:8px;margin-bottom:7px">'
+      +'<span style="min-width:32px;font-size:13px;font-weight:600;color:var(--sub)">'+d+'</span>'
+      +'<input type="time" id="ts-start-'+d+'" style="flex:1" placeholder="Start">'
+      +'<span style="color:var(--muted);font-size:13px">–</span>'
+      +'<input type="time" id="ts-end-'+d+'" style="flex:1" placeholder="End">'
+      +'</div>';
+  }).join('');
+}
+
+function getSelectedSetupDays(){
+  return DAYS.filter(function(d){ var el=document.querySelector('.day-btn[data-d="'+d+'"]'); return el&&el.classList.contains('active'); });
+}
+
+document.getElementById('btn-add-subj').onclick=function(){
+  var code=document.getElementById('inp-code').value.trim().toUpperCase();
+  var name=document.getElementById('inp-name').value.trim();
+  var hrs=parseFloat(document.getElementById('inp-hrs').value)||2;
+  var days=getSelectedSetupDays();
+  var err=document.getElementById('add-err');
+  if(!code){ showErr('add-err','Enter a subject code.'); return; }
+  if(!days.length){ showErr('add-err','Select at least one day.'); return; }
+  err.classList.add('hidden');
+
+  // collect times
+  var times={};
+  days.forEach(function(d){
+    var ts=document.getElementById('ts-start-'+d);
+    var te=document.getElementById('ts-end-'+d);
+    if(ts&&te&&(ts.value||te.value)) times[d]={start:ts.value,end:te.value};
+  });
+
+  db.subjects.push({id:Date.now(),code:code,name:name,hours:hrs,days:days,times:times});
+  saveDB();
+  // reset
+  document.getElementById('inp-code').value='';
+  document.getElementById('inp-name').value='';
+  document.getElementById('inp-hrs').value='0';
+  document.querySelectorAll('.day-btn[data-d]').forEach(function(el){ el.classList.remove('active'); });
+  document.getElementById('time-slots-wrap').classList.add('hidden');
+  renderSubjList();
+};
+
+document.getElementById('btn-start').onclick=function(){
+  var raw=document.getElementById('inp-start').value.trim();
+  var weeksVal=document.getElementById('inp-weeks').value;
+  var weeks=weeksVal!==''?parseInt(weeksVal)||0:0;
+  var err=document.getElementById('start-err');
+  if(!raw){ showErr('start-err','Enter the semester start date.'); return; }
+  // parse mm/dd/yyyy → yyyy-mm-dd
+  var parts=raw.split('/');
+  var start='';
+  if(parts.length===3 && parts[2].length===4){
+    start=parts[2]+'-'+(parts[0].length<2?'0'+parts[0]:parts[0])+'-'+(parts[1].length<2?'0'+parts[1]:parts[1]);
+  } else {
+    showErr('start-err','Enter date as mm/dd/yyyy.'); return;
+  }
+  if(!db.subjects.length){ showErr('start-err','Add at least one subject first.'); return; }
+  err.classList.add('hidden');
+  db.start=start; db.weeks=weeks; saveDB();
+  showMain();
+};
+
+function renderSubjList(){
+  var el=document.getElementById('subj-list');
+  if(!db.subjects.length){ el.innerHTML=''; return; }
+  var h='<div class="card"><h3>Subjects ('+db.subjects.length+')</h3>';
+  db.subjects.forEach(function(s){
+    var timeStr='';
+    if(s.times) DAYS.forEach(function(d){ if(s.times[d]&&s.days.indexOf(d)>=0) timeStr+=d+': '+fmtTime(s.times[d])+' '; });
+    h+='<div class="subj-card"><div class="sc-top"><div>'
+      +'<div class="sc-name">'+esc(s.code)+(s.name?' — '+esc(s.name):'')+'</div>'
+      +'<div class="sc-meta">'+fmtH(s.hours)+'/session · '+s.days.join(', ')+(timeStr?'<br><span class="time-chip">'+timeStr.trim()+'</span>':'')+'</div>'
+      +'</div><button class="btn btn-red btn-sm" onclick="delSubj('+s.id+')">✕</button></div></div>';
+  });
+  el.innerHTML=h+'</div>';
+}
+
+function delSubj(id){
+  db.subjects=db.subjects.filter(function(s){ return s.id!==id; });
+  saveDB(); renderSubjList();
+}
+
+function showErr(id, msg){ var el=document.getElementById(id); el.textContent=msg; el.classList.remove('hidden'); }
+function clearErr(id){ document.getElementById(id).classList.add('hidden'); }
+
+// ═══════════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════════
+function showMain(){
+  document.getElementById('pg-setup').classList.add('hidden');
+  document.getElementById('pg-main').classList.remove('hidden');
+  switchTab('today');
+}
+
+function switchTab(tab){
+  curTab=tab;
+  ['today','week','all','settings'].forEach(function(t){
+    document.getElementById('pg-'+t).classList.toggle('hidden',t!==tab);
+    var el=document.getElementById('t-'+t); if(el) el.classList.toggle('on',t===tab);
+  });
+  renderTab();
+}
+
+function renderTab(){
+  if(curTab==='today') renderToday();
+  else if(curTab==='week') renderWeek();
+  else if(curTab==='all') renderAll();
+  else renderSettings();
+}
+
+// ═══════════════════════════════════════════
+// TODAY TAB
+// ═══════════════════════════════════════════
+function renderToday(){
+  var el=document.getElementById('pg-today');
+  var ts=todayS(), wk=getWk(ts), dow=getDow(ts);
+  var sessions=allSessionsFor(ts);
+
+  // stats
+  var totalP=0;
+  db.subjects.forEach(function(s){
+    if(db.start){
+      var start=pDate(db.start);
+      for(var w=0;w<db.weeks;w++){
+        s.days.forEach(function(origDay){
+          var date=new Date(start);
+          var sdow=date.getDay()===0?6:date.getDay()-1;
+          var di=DAYS.indexOf(origDay);
+          date.setDate(date.getDate()+w*7+(di-sdow+7)%7);
+          var ds=dStr(date);
+          // compute effective day
+          var effDay=effectiveDayFor(s,origDay,ds);
+          // recalculate actual date of effDay in that week
+          var effDate=new Date(date);
+          var fromDi=DAYS.indexOf(origDay), toDi=DAYS.indexOf(effDay);
+          effDate.setDate(effDate.getDate()+(toDi-fromDi));
+          var effDs=dStr(effDate);
+          if(effDs<=ts) totalP++;
+        });
+      }
+    }
+  });
+
+  var attS=0, attH=0;
+  Object.keys(db.records).forEach(function(k){
+    if(db.records[k]==='attended'){
+      var parts=k.split('_'), id=Number(parts[0]), ds=parts.slice(1).join('_');
+      var s=db.subjects.find(function(x){ return x.id===id; });
+      if(s){ attS++; var ex=db.extra[ds]&&db.extra[ds].find(function(e){ return e.id===id; }); attH+=ex?ex.hours:s.hours; }
+    }
+  });
+  var rate=totalP>0?Math.round(attS/totalP*100):0;
+
+  var h='<div class="stat-row">'
+    +'<div class="stat-box"><div class="val">'+(wk?'Wk '+wk:'—')+'</div><div class="lbl">Current week</div></div>'
+    +'<div class="stat-box"><div class="val" style="color:#1D9E75">'+attS+'</div><div class="lbl">Sessions attended</div></div>'
+    +'<div class="stat-box"><div class="val">'+fmtH(attH)+'</div><div class="lbl">Hours attended</div></div>'
+    +'<div class="stat-box"><div class="val" style="color:#1a73e8">'+(totalP>0?rate+'%':'—')+'</div><div class="lbl">Attendance rate</div></div>'
+    +'</div>'
+    +'<div class="pbar-wrap"><div style="display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:4px"><span>Overall</span><span>'+attS+' / '+totalP+' sessions</span></div>'
+    +'<div class="pbar"><div class="pfill" style="width:'+rate+'%"></div></div></div>';
+
+  // Day header + add button
+  h+='<div style="display:flex;justify-content:space-between;align-items:center;margin:16px 0 12px">'
+    +'<div style="font-size:15px;font-weight:700">'
+    +(dow?DAYSFULL[DAYS.indexOf(dow)]:'Today')
+    +' <span style="font-weight:400;font-size:12px;color:var(--muted)">'+fmtDL(ts)+'</span>'
+    +(wk?'<span class="today-tag">Wk '+wk+'</span>':'')
+    +'</div>';
+
+  if(wk&&dow){
+    var nonToday=db.subjects.filter(function(s){
+      var alreadyIds=sessions.map(function(x){ return x.subj.id; });
+      return alreadyIds.indexOf(s.id)<0;
+    });
+    if(nonToday.length) h+='<button class="btn btn-purple btn-sm" onclick="openAddToday()">+ Add</button>';
+  }
+  h+='</div>';
+
+  if(!wk){ h+='<p style="color:var(--muted);text-align:center;padding:20px 0">Outside semester range.</p>'; }
+  else if(!dow){ h+='<p style="color:var(--muted);text-align:center;padding:20px 0">Weekend — no lectures! 🎉</p>'; }
+  else if(!sessions.length){ h+='<p style="color:var(--muted);text-align:center;padding:20px 0">No lectures scheduled today.</p>'; }
+  else {
+    sessions.forEach(function(sess){
+      var s=sess.subj, rec=getRec(s.id,ts);
+      var timeStr=fmtTime(sess.time);
+      var badges='';
+      if(sess.isExtra) badges+='<span class="extra-tag">Extra</span>';
+      if(sess.wasMoved) badges+='<span class="moved-tag">Moved</span>';
+      h+='<div class="att-card">'
+        +'<h4>'+esc(s.code)+badges+'</h4>'
+        +'<div class="sub">'+(s.name?esc(s.name)+' · ':'')+fmtH(s.hours)+(timeStr?' · '+timeStr:'')+'</div>'
+        +'<div class="att-btns">'
+        +'<div class="att-btn'+(rec==='attended'?' yes':'')+'" onclick="setRec('+s.id+',\''+ts+'\',\'attended\')">✓ Attended</div>'
+        +'<div class="att-btn'+(rec==='missed'?' no':'')+'" onclick="setRec('+s.id+',\''+ts+'\',\'missed\')">✗ Missed</div>'
+        +'</div>';
+      if(sess.isExtra){
+        h+='<div style="margin-top:8px;text-align:right"><button class="btn btn-red btn-sm" style="font-size:11px;padding:4px 10px" onclick="removeExtraSubj('+s.id+',\''+ts+'\')">Remove</button></div>';
+      }
+      h+='</div>';
+    });
+  }
+
+  h+='<button class="btn btn-outline" style="margin-top:6px" onclick="exportTxt()">📄 Export attendance</button>';
+  el.innerHTML=h;
+}
+
+// ═══════════════════════════════════════════
+// WEEK TAB
+// ═══════════════════════════════════════════
+function getMonday(off){
+  var n=new Date(), dow=n.getDay(), diff=n.getDate()-(dow===0?6:dow-1);
+  var m=new Date(n); m.setDate(diff+off*7); m.setHours(0,0,0,0); return m;
+}
+function weekDates(off){
+  var m=getMonday(off);
+  return DAYS.map(function(_,i){ var d=new Date(m); d.setDate(d.getDate()+i); return dStr(d); });
+}
+
+function renderWeek(){
+  var el=document.getElementById('pg-week');
+  var dates=weekDates(wkOff), ts=todayS();
+  var h='<div class="week-nav">'
+    +'<button onclick="wkOff--;renderWeek()">‹ Prev</button>'
+    +'<span>'+fmtD(dates[0])+' – '+fmtD(dates[4])+'</span>'
+    +'<button onclick="wkOff++;renderWeek()">Next ›</button>'
+    +'</div>';
+  dates.forEach(function(ds,i){
+    var wk=getWk(ds), sessions=allSessionsFor(ds), isToday=ds===ts, isPast=ds<ts;
+    h+='<div class="day-section"><h4>'+DAYSFULL[i]+' <span style="font-weight:400;color:var(--muted)">'+fmtD(ds)+'</span>'
+      +(isToday?'<span class="today-tag">Today</span>':'')
+      +(wk?' <span style="font-size:11px;color:var(--muted)">Wk '+wk+'</span>':'')+'</h4>';
+    // '+ Add' button for past/today days in week view
+    var nonInDay=(isToday||isPast)&&wk?db.subjects.filter(function(s){ return sessions.map(function(x){return x.subj.id;}).indexOf(s.id)<0; }):[];
+    if(nonInDay.length){
+      h+='<div style="display:flex;justify-content:flex-end;margin:-2px 0 6px">'
+        +'<button class="btn btn-purple btn-sm" onclick="openAddToday(\''+ds+'\')">&plus; Add subject</button>'
+        +'</div>';
+    }
+    if(!sessions.length||!wk){ h+='<p style="font-size:12px;color:var(--faint);margin:4px 0 0">No lectures</p>'; }
+    else {
+      sessions.forEach(function(sess){
+        var s=sess.subj, rec=getRec(s.id,ds);
+        var pill=rec==='attended'?'pill-att':rec==='missed'?'pill-mis':'pill-pend';
+        var ptxt=rec==='attended'?'Attended':rec==='missed'?'Missed':isPast?'No record':'Upcoming';
+        var timeStr=fmtTime(sess.time);
+        var badge=sess.isExtra?'<span class="extra-tag">Extra</span>':sess.wasMoved?'<span class="moved-tag">Moved</span>':'';
+        h+='<div class="w-row"><div class="wname">'+esc(s.code)+badge+'<div class="wsub">'+(s.name?esc(s.name)+' · ':'')+fmtH(s.hours)+(timeStr?' · '+timeStr:'')+'</div></div>';
+        if(isToday||isPast){
+          h+='<div style="display:flex;gap:5px;align-items:center">'
+            +'<div class="att-btn'+(rec==='attended'?' yes':'')+'" style="padding:5px 10px;font-size:12px;border-width:1.5px" onclick="setRec('+s.id+',\''+ds+'\',\'attended\')">&#10003;</div>'
+            +'<div class="att-btn'+(rec==='missed'?' no':'')+'" style="padding:5px 10px;font-size:12px;border-width:1.5px" onclick="setRec('+s.id+',\''+ds+'\',\'missed\')">&#10007;</div>'
+            +(sess.isExtra?'<button class="btn btn-red btn-sm" style="font-size:11px;padding:4px 8px;margin:0" onclick="removeExtraSubj('+s.id+',\''+ds+'\')">&times;</button>':'')
+            +'</div>';
+        } else { h+='<span class="pill '+pill+'">'+ptxt+'</span>'; }
+        h+='</div>';
+      });
+    }
+    h+='</div>';
+  });
+  el.innerHTML=h;
+}
+
+// ═══════════════════════════════════════════
+// ALL SUBJECTS TAB
+// ═══════════════════════════════════════════
+function renderAll(){
+  var el=document.getElementById('pg-all');
+  if(!db.subjects.length){ el.innerHTML='<p style="color:var(--muted);text-align:center;padding:20px">No subjects yet.</p>'; return; }
+  var ts=todayS(), h='';
+  db.subjects.forEach(function(s){
+    var att=0, mis=0, total=0;
+    if(db.start){
+      var start=pDate(db.start);
+      for(var w=0;w<db.weeks;w++){
+        s.days.forEach(function(origDay){
+          var di=DAYS.indexOf(origDay);
+          var date=new Date(start);
+          var sdow=date.getDay()===0?6:date.getDay()-1;
+          date.setDate(date.getDate()+w*7+(di-sdow+7)%7);
+          var ds=dStr(date);
+          var effDay=effectiveDayFor(s,origDay,ds);
+          var effDi=DAYS.indexOf(effDay);
+          var effDate=new Date(date); effDate.setDate(effDate.getDate()+(effDi-di));
+          var effDs=dStr(effDate);
+          if(effDs<=ts){ total++; var r=getRec(s.id,effDs); if(r==='attended') att++; else if(r==='missed') mis++; }
+        });
+      }
+    }
+    // extra sessions
+    Object.keys(db.extra).forEach(function(ds){
+      if(ds>ts) return;
+      var e=(db.extra[ds]||[]).find(function(e){ return e.id===s.id; });
+      if(e){ total++; var r=getRec(s.id,ds); if(r==='attended') att++; else if(r==='missed') mis++; }
+    });
+    var rate=total>0?Math.round(att/total*100):0;
+    // show days including any moves
+    var daysDisplay=s.days.map(function(d){
+      var latestChange=db.ttChanges.filter(function(c){ return c.subjId===s.id&&c.fromDay===d; });
+      if(latestChange.length){ latestChange.sort(function(a,b){ return a.fromDate>b.fromDate?-1:1; }); return d+'→'+latestChange[0].toDay; }
+      return d;
+    }).join(', ');
+    var timeStr='';
+    if(s.times) DAYS.forEach(function(d){ if(s.times[d]&&s.days.indexOf(d)>=0){ var t=getTimeFor(s,d,ts); if(t) timeStr+=d+': '+fmtTime(t)+' '; } });
+    h+='<div class="all-row"><h4>'+esc(s.code)+(s.name?' <span style="font-weight:400;font-size:13px;color:var(--muted)">— '+esc(s.name)+'</span>':'')+'</h4>'
+      +'<div class="sub">'+daysDisplay+' · '+fmtH(s.hours)+'/session'+(timeStr?' · '+timeStr.trim():'')+'</div>'
+      +'<div class="all-stats"><span style="color:#1D9E75">✓ '+att+'</span><span style="color:#e53935">✗ '+mis+'</span>'
+      +'<span style="color:var(--muted)">'+(total-att-mis)+' pending</span><span style="color:var(--muted)">Rate: '+(total>0?rate+'%':'—')+'</span></div>'
+      +'<div class="pbar"><div class="pfill" style="width:'+rate+'%"></div></div></div>';
+  });
+  el.innerHTML=h;
+}
+
+// ═══════════════════════════════════════════
+// SETTINGS TAB
+// ═══════════════════════════════════════════
+function renderSettings(){
+  var el=document.getElementById('pg-settings');
+  var h='';
+
+  // Semester info
+  h+='<div class="card"><h3>Semester</h3>'
+    +'<div style="font-size:13px;color:var(--muted)">Start: <b style="color:var(--text)">'+(db.start?fmtDL(db.start):'—')+'</b> · Weeks: <b style="color:var(--text)">'+db.weeks+'</b></div>'
+    +'<button class="btn btn-outline btn-sm" style="margin-top:10px" onclick="goSetup()">Edit semester & subjects</button>'
+    +'</div>';
+
+  // Export
+  h+='<div class="card"><h3>Export</h3>'
+    +'<button class="btn btn-outline" onclick="exportTxt()">📄 Export attendance as .txt</button>'
+    +'</div>';
+
+  // Timetable changes — tucked away
+  h+='<div class="card" style="border-color:#f39c12">'
+    +'<h3 style="color:#e65100">⚠ Timetable changes</h3>'
+    +'<p style="font-size:12px;color:var(--muted);margin:0 0 10px">Use this only when your official timetable changes mid-semester. This will shift future sessions to the new day.</p>'
+    +'<button class="btn btn-orange" onclick="openTTChange()">Change a session day</button>';
+
+  if(db.ttChanges.length){
+    h+='<hr class="divider"><div style="font-size:12px;color:var(--muted);margin-bottom:6px">Applied changes ('+db.ttChanges.length+')</div>';
+    db.ttChanges.forEach(function(c,i){
+      var s=db.subjects.find(function(x){ return x.id===c.subjId; });
+      h+='<div class="tt-change-row"><div class="ttr-top">'
+        +'<span><b>'+(s?s.code:'?')+'</b> '+c.fromDay+' → '+c.toDay+' (from '+fmtD(c.fromDate)+')</span>'
+        +'<button class="btn btn-red btn-sm" onclick="deleteTTChange('+i+')">✕</button>'
+        +'</div>'+(c.newStart||c.newEnd?'<div class="time-chip">New time: '+fmtTime({start:c.newStart,end:c.newEnd})+'</div>':'')
+        +'</div>';
+    });
+  }
+  h+='</div>';
+
+  // Dev / Test: Date simulator
+  h+='<div class="card" style="border-color:#7c4dff">'
+    +'<h3 style="color:#7c4dff">🧪 Test — Simulate date</h3>'
+    +'<p style="font-size:12px;color:var(--muted);margin:0 0 10px">Override today\'s date to test the app day-by-day. Won\'t affect your real data.</p>'
+    +'<div id="sim-date-display" style="font-size:12px;font-weight:600;margin-bottom:8px"></div>'
+    +'<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">'
+    +'<input type="date" id="sim-date-inp" style="flex:1;min-width:120px">'
+    +'<button class="btn btn-purple btn-sm" style="margin:0" onclick="var v=document.getElementById(\'sim-date-inp\').value;if(v)setSimDate(v);">Set date</button>'
+    +'<button class="btn btn-grey btn-sm" style="margin:0" onclick="setSimDate(\'\');">Clear</button>'
+    +'</div>'
+    +'<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">'
+    +'<button class="btn btn-grey btn-sm" style="margin:0;font-size:11px" onclick="stepSimDate(-1)">‹ Prev day</button>'
+    +'<button class="btn btn-grey btn-sm" style="margin:0;font-size:11px" onclick="stepSimDate(1)">Next day ›</button>'
+    +'</div>'
+    +'</div>';
+
+  // Hard Reset
+  h+='<div class="card" style="border-color:#e53935">'
+    +'<h3 style="color:#e53935">Reset</h3>'
+    +'<button class="btn btn-red" onclick="resetAll()">Reset all data</button>'
+    +'</div>';
+
+  el.innerHTML=h;
+  renderSimCard();
+  if(_simDate) document.getElementById('sim-date-inp').value=_simDate;
+}
+
+function stepSimDate(days){
+  var base=_simDate||dStr(new Date());
+  var d=pDate(base);
+  d.setDate(d.getDate()+days);
+  setSimDate(dStr(d));
+  document.getElementById('sim-date-inp').value=todayS();
+}
+
+function goSetup(){
+  document.getElementById('pg-main').classList.add('hidden');
+  document.getElementById('pg-setup').classList.remove('hidden');
+  // convert stored yyyy-mm-dd back to mm/dd/yyyy for display
+  var _ds=db.start||'';
+  if(_ds.length===10&&_ds[4]==='-'){
+    var _p=_ds.split('-');
+    _ds=_p[1]+'/'+_p[2]+'/'+_p[0];
+  }
+  document.getElementById('inp-start').value=_ds;
+  document.getElementById('inp-weeks').value=db.weeks||16;
+  document.getElementById('btn-start').textContent='Save & continue →';
+  document.getElementById('setup-note').textContent='Editing your setup — tap "Save & continue" when done.';
+  renderSubjList();
+}
+
+function resetAll(){
+  if(!confirm('Delete all data and start fresh?')) return;
+  db={start:'',weeks:16,subjects:[],records:{},extra:{},ttChanges:[]};
+  saveDB();
+  document.getElementById('pg-main').classList.add('hidden');
+  document.getElementById('pg-setup').classList.remove('hidden');
+  document.getElementById('setup-note').textContent='Set up once — the app will open directly to today after this.';
+  document.getElementById('btn-start').textContent='Start tracking →';
+  renderSubjList();
+}
+
+// ═══════════════════════════════════════════
+// ADD SUBJECT TO TODAY MODAL
+// ═══════════════════════════════════════════
+var _addTodayDate='';
+function openAddToday(ds){
+  _addTodayDate=ds||todayS();
+  var currentIds=allSessionsFor(_addTodayDate).map(function(x){ return x.subj.id; });
+  var available=db.subjects.filter(function(s){ return currentIds.indexOf(s.id)<0; });
+  if(!available.length){ alert('All subjects are already in this day\'s schedule.'); return; }
+  var sel=document.getElementById('at-subj');
+  sel.innerHTML=available.map(function(s){
+    return '<option value="'+s.id+'">'+esc(s.code)+(s.name?' — '+esc(s.name):'')+'</option>';
+  }).join('');
+  document.getElementById('at-hrs').value=available[0].hours;
+  var isToday=_addTodayDate===todayS();
+  document.getElementById('at-modal-title').textContent=(isToday?'Add subject to today':'Add subject to '+fmtDL(_addTodayDate));
+  clearErr('at-err');
+  openModal('modal-add-today');
+}
+
+function confirmAddToday(){
+  var ds=_addTodayDate||todayS();
+  var id=parseInt(document.getElementById('at-subj').value);
+  var hrs=parseFloat(document.getElementById('at-hrs').value)||2;
+  if(!id||isNaN(id)){ showErr('at-err','Select a subject.'); return; }
+  if(hrs<=0){ showErr('at-err','Enter valid hours.'); return; }
+  if(!db.extra[ds]) db.extra[ds]=[];
+  if(db.extra[ds].find(function(e){ return e.id===id; })){ showErr('at-err','Already added.'); return; }
+  db.extra[ds].push({id:id,hours:hrs});
+  saveDB(); closeModal('modal-add-today'); renderTab();
+}
+
+function removeExtraSubj(id,ds){
+  if(!db.extra[ds]) return;
+  db.extra[ds]=db.extra[ds].filter(function(e){ return e.id!==id; });
+  if(!db.extra[ds].length) delete db.extra[ds];
+  saveDB(); renderTab();
+}
+
+// ═══════════════════════════════════════════
+// TIMETABLE CHANGE MODAL
+// ═══════════════════════════════════════════
+function openTTChange(){
+  // populate subject dropdown
+  var sel=document.getElementById('ttc-subj');
+  sel.innerHTML=db.subjects.map(function(s){
+    return '<option value="'+s.id+'">'+esc(s.code)+(s.name?' — '+esc(s.name):'')+'</option>';
+  }).join('');
+  ttcSubjChange();
+  // reset to-day selection
+  document.querySelectorAll('.day-btn[data-ttc]').forEach(function(el){ el.classList.remove('active'); });
+  document.getElementById('ttc-date').value=todayS();
+  document.getElementById('ttc-tstart').value='';
+  document.getElementById('ttc-tend').value='';
+  clearErr('ttc-err');
+  openModal('modal-tt-change');
+}
+
+function ttcSubjChange(){
+  var id=parseInt(document.getElementById('ttc-subj').value);
+  var s=db.subjects.find(function(x){ return x.id===id; });
+  var sel=document.getElementById('ttc-from-day');
+  if(!s){ sel.innerHTML=''; return; }
+  sel.innerHTML=s.days.map(function(d){ return '<option value="'+d+'">'+d+'</option>'; }).join('');
+}
+
+document.querySelectorAll('.day-btn[data-ttc]').forEach(function(el){
+  el.onclick=function(){
+    document.querySelectorAll('.day-btn[data-ttc]').forEach(function(x){ x.classList.remove('active'); });
+    this.classList.add('active');
+  };
+});
+
+function confirmTTChange(){
+  var id=parseInt(document.getElementById('ttc-subj').value);
+  var fromDay=document.getElementById('ttc-from-day').value;
+  var toEl=document.querySelector('.day-btn[data-ttc].active');
+  var fromDate=document.getElementById('ttc-date').value;
+  var newStart=document.getElementById('ttc-tstart').value;
+  var newEnd=document.getElementById('ttc-tend').value;
+  if(!toEl){ showErr('ttc-err','Select the new day.'); return; }
+  var toDay=toEl.getAttribute('data-ttc');
+  if(!fromDate){ showErr('ttc-err','Enter the effective date.'); return; }
+  if(fromDay===toDay){ showErr('ttc-err','New day must be different from current day.'); return; }
+  db.ttChanges.push({subjId:id,fromDay:fromDay,toDay:toDay,fromDate:fromDate,newStart:newStart,newEnd:newEnd});
+  saveDB();
+  closeModal('modal-tt-change');
+  renderTab();
+}
+
+function deleteTTChange(i){
+  if(!confirm('Remove this timetable change?')) return;
+  db.ttChanges.splice(i,1);
+  saveDB(); renderSettings();
+}
+
+// ═══════════════════════════════════════════
+// MODAL HELPERS
+// ═══════════════════════════════════════════
+function openModal(id){ document.getElementById(id).classList.remove('hidden'); }
+function closeModal(id){ document.getElementById(id).classList.add('hidden'); }
+
+// close on overlay click
+['modal-add-today','modal-tt-change'].forEach(function(id){
+  document.getElementById(id).addEventListener('click',function(e){
+    if(e.target===this) closeModal(id);
+  });
+});
+
+// ═══════════════════════════════════════════
+// EXPORT TXT
+// ═══════════════════════════════════════════
+function exportTxt(){
+  var lines=[], ts=todayS();
+  lines.push('=== LECTURE ATTENDANCE EXPORT ===');
+  lines.push('Generated: '+new Date().toLocaleString('en-GB'));
+  lines.push('Semester start: '+(db.start?fmtDL(db.start):'—')+' | Weeks: '+db.weeks);
+  lines.push('');
+
+  // Subject summary
+  lines.push('─────────────────────────────────');
+  lines.push(' SUBJECT SUMMARY');
+  lines.push('─────────────────────────────────');
+  db.subjects.forEach(function(s){
+    var att=0,mis=0,total=0;
+    if(db.start){
+      var start=pDate(db.start);
+      for(var w=0;w<db.weeks;w++){
+        s.days.forEach(function(origDay){
+          var di=DAYS.indexOf(origDay);
+          var date=new Date(start);
+          var sdow=date.getDay()===0?6:date.getDay()-1;
+          date.setDate(date.getDate()+w*7+(di-sdow+7)%7);
+          var ds=dStr(date);
+          var effDay=effectiveDayFor(s,origDay,ds);
+          var effDi=DAYS.indexOf(effDay);
+          var effDate=new Date(date); effDate.setDate(effDate.getDate()+(effDi-di));
+          var effDs=dStr(effDate);
+          if(effDs<=ts){ total++; var r=getRec(s.id,effDs); if(r==='attended') att++; else if(r==='missed') mis++; }
+        });
+      }
+    }
+    Object.keys(db.extra).forEach(function(ds){
+      if(ds>ts) return;
+      var e=(db.extra[ds]||[]).find(function(e){ return e.id===s.id; });
+      if(e){ total++; var r=getRec(s.id,ds); if(r==='attended') att++; else if(r==='missed') mis++; }
+    });
+    var rate=total>0?Math.round(att/total*100)+'%':'—';
+    lines.push(' '+s.code+(s.name?' ('+s.name+')':''));
+    lines.push('   Attended: '+att+' | Missed: '+mis+' | Total: '+total+' | Rate: '+rate);
+  });
+  lines.push('');
+
+  // Daily log
+  lines.push('─────────────────────────────────');
+  lines.push(' DAILY LOG  (oldest → newest)');
+  lines.push('─────────────────────────────────');
+
+  // collect all dated sessions
+  var allDates={};
+  Object.keys(db.records).forEach(function(k){ var ds=k.split('_').slice(1).join('_'); if(ds) allDates[ds]=true; });
+  Object.keys(db.extra).forEach(function(ds){ allDates[ds]=true; });
+  var sorted=Object.keys(allDates).sort();
+
+  if(!sorted.length){ lines.push(' No records yet.'); }
+  sorted.forEach(function(ds){
+    var wk=getWk(ds), dow=getDow(ds);
+    lines.push('');
+    lines.push(' '+(dow?DAYSFULL[DAYS.indexOf(dow)]:ds)+', '+fmtDL(ds)+(wk?' [Week '+wk+']':''));
+    var sessions=allSessionsFor(ds);
+    if(!sessions.length){ lines.push('   (no sessions)'); return; }
+    sessions.forEach(function(sess){
+      var rec=getRec(sess.subj.id,ds);
+      var status=rec==='attended'?'✓ Attended':rec==='missed'?'✗ Missed':'- No record';
+      var tag=sess.isExtra?' [extra]':sess.wasMoved?' [moved]':'';
+      var timeStr=fmtTime(sess.time);
+      lines.push('   '+sess.subj.code+(sess.subj.name?' - '+sess.subj.name:'')+tag+': '+status
+        +' ('+fmtH(sess.subj.hours)+(timeStr?' · '+timeStr:'')+')');
+    });
+  });
+
+  lines.push('');
+  lines.push('=== END OF REPORT ===');
+
+  var blob=new Blob([lines.join('\n')],{type:'text/plain'});
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='attendance_'+ts+'.txt';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+}
+
+// ═══════════════════════════════════════════
+// SERVICE WORKER REGISTRATION
+// ═══════════════════════════════════════════
+if('serviceWorker' in navigator){
+  window.addEventListener('load', function(){
+    navigator.serviceWorker.register('./sw.js').catch(function(){});
+  });
+}
+
+// ═══════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════
+loadDB();
+try{ isDark=localStorage.getItem('ltr_theme')==='dark'; }catch(e){}
+applyTheme();
+
+if(db.start && db.subjects.length){
+  showMain();
+} else {
+  renderSubjList();
+}
+</script>
+</body>
+</html>
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Attendance Tracker</title>
+
+<!-- PWA -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1a73e8">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="LecTracker">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192x192.png">
+<style>
+:root{
+  --bg:#f5f5f5;--card:#fff;--border:#e0e0e0;--text:#222;--sub:#666;
+  --muted:#888;--faint:#ccc;--row:#f9f9f9;--stat:#f0f7ff;
+  --inp:#fff;--inpb:#ccc;--tab:#fff;--tabb:#ccc;--tabt:#555;
+  --dbg:#fff;--db:#ccc;--dt:#555;--wrow:#fff;--acard:#fff;
+  --arow:#fff;--pbar:#eee;--wbtn:#fff;--wbtnb:#ccc;--wt:#555;
+  --dsb:#eee;--dsh:#555;--pend:#f5f5f5;--pendt:#888;
+}
+body.dark{
+  --bg:#121212;--card:#1e1e1e;--border:#333;--text:#e8e8e8;--sub:#aaa;
+  --muted:#777;--faint:#444;--row:#2a2a2a;--stat:#1a2940;
+  --inp:#2a2a2a;--inpb:#444;--tab:#2a2a2a;--tabb:#444;--tabt:#bbb;
+  --dbg:#2a2a2a;--db:#444;--dt:#bbb;--wrow:#252525;--acard:#1e1e1e;
+  --arow:#1e1e1e;--pbar:#333;--wbtn:#2a2a2a;--wbtnb:#444;--wt:#bbb;
+  --dsb:#333;--dsh:#aaa;--pend:#2a2a2a;--pendt:#666;
+}
+*{box-sizing:border-box}
+body{font-family:sans-serif;margin:0;padding:12px;background:var(--bg);font-size:14px;color:var(--text);transition:background .2s,color .2s;max-width:520px;margin:0 auto}
+.card{background:var(--card);border-radius:12px;padding:16px;margin-bottom:12px;border:1px solid var(--border)}
+h2{font-size:17px;font-weight:700;margin:0 0 14px;color:var(--text)}
+h3{font-size:14px;font-weight:600;margin:0 0 10px;color:var(--sub)}
+label{display:block;font-size:12px;color:var(--sub);margin-bottom:4px;margin-top:10px}
+input[type=text],input[type=number],input[type=date],input[type=time],select{
+  width:100%;padding:8px 10px;border:1px solid var(--inpb);border-radius:7px;
+  font-size:14px;background:var(--inp);color:var(--text);outline:none;
+}
+input:focus,select:focus{border-color:#1a73e8}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.day-row{display:flex;gap:5px;margin:8px 0}
+.day-btn{flex:1;padding:8px 2px;border:1.5px solid var(--db);border-radius:7px;background:var(--dbg);font-size:12px;cursor:pointer;text-align:center;font-weight:600;color:var(--dt);transition:all .15s}
+.day-btn.active{background:#1a73e8;border-color:#1a73e8;color:#fff}
+.btn{display:block;padding:11px 20px;background:#1a73e8;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;margin-top:10px;width:100%;text-align:center}
+.btn:active{opacity:.85}
+.btn-green{background:#1D9E75}
+.btn-orange{background:#e65100}
+.btn-outline{background:transparent;color:#1a73e8;border:1.5px solid #1a73e8}
+.btn-red{background:#e53935}
+.btn-purple{background:#7c4dff}
+.btn-grey{background:var(--row);color:var(--text);border:1px solid var(--border)}
+.btn-sm{padding:6px 13px;font-size:12px;width:auto;margin-top:0;display:inline-block}
+.err{color:#e53935;font-size:12px;margin-top:6px}
+.ok{color:#1D9E75;font-size:12px;margin-top:6px}
+.stat-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.stat-box{background:var(--stat);border-radius:9px;padding:10px 12px;text-align:center}
+.stat-box .val{font-size:22px;font-weight:700;color:#1a73e8}
+.stat-box .lbl{font-size:11px;color:var(--muted);margin-top:2px}
+.att-card{background:var(--acard);border-radius:10px;padding:14px;margin-bottom:10px;border:1px solid var(--border)}
+.att-card h4{font-size:15px;font-weight:700;margin:0 0 3px;color:var(--text)}
+.att-card .sub{font-size:12px;color:var(--muted);margin-bottom:12px}
+.att-btns{display:flex;gap:8px}
+.att-btn{flex:1;padding:11px;border:2px solid var(--faint);border-radius:8px;background:transparent;font-size:13px;font-weight:600;cursor:pointer;text-align:center;color:var(--muted);transition:all .15s}
+.att-btn.yes{background:#e8f5e9;border-color:#1D9E75;color:#1D9E75}
+.att-btn.no{background:#ffebee;border-color:#e53935;color:#e53935}
+.week-nav{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.week-nav button{padding:7px 13px;border:1px solid var(--wbtnb);border-radius:7px;background:var(--wbtn);cursor:pointer;font-size:13px;color:var(--text)}
+.week-nav span{flex:1;text-align:center;font-size:13px;color:var(--wt);font-weight:500}
+.day-section{margin-bottom:14px}
+.day-section h4{font-size:13px;font-weight:600;color:var(--dsh);margin:0 0 7px;padding-bottom:5px;border-bottom:1px solid var(--dsb)}
+.w-row{display:flex;align-items:center;padding:9px 10px;border:1px solid var(--border);border-radius:8px;margin-bottom:5px;background:var(--wrow);gap:8px}
+.w-row .wname{flex:1;font-weight:600;font-size:13px;color:var(--text)}
+.w-row .wsub{font-size:11px;color:var(--muted)}
+.pill{font-size:11px;padding:3px 9px;border-radius:99px;font-weight:600}
+.pill-att{background:#e8f5e9;color:#1D9E75}
+.pill-mis{background:#ffebee;color:#e53935}
+.pill-pend{background:var(--pend);color:var(--pendt)}
+.pbar-wrap{margin:8px 0 4px}
+.pbar{width:100%;height:7px;background:var(--pbar);border-radius:99px;overflow:hidden}
+.pfill{height:100%;background:#1D9E75;border-radius:99px;transition:width .3s}
+.tab-nav{display:flex;gap:5px;margin-bottom:14px;flex-wrap:wrap}
+.tab{padding:7px 13px;border:1.5px solid var(--tabb);border-radius:8px;background:var(--tab);font-size:13px;cursor:pointer;font-weight:600;color:var(--tabt);transition:all .15s}
+.tab.on{background:#1a73e8;border-color:#1a73e8;color:#fff}
+.hidden{display:none!important}
+.today-tag{background:#e3f2fd;color:#1a73e8;font-size:11px;padding:2px 7px;border-radius:99px;margin-left:5px}
+.extra-tag{background:#fff3e0;color:#e65100;font-size:10px;padding:2px 6px;border-radius:99px;margin-left:5px;font-weight:600}
+.moved-tag{background:#f3e5f5;color:#7c4dff;font-size:10px;padding:2px 6px;border-radius:99px;margin-left:5px;font-weight:600}
+.all-row{background:var(--arow);border-radius:10px;padding:14px;margin-bottom:10px;border:1px solid var(--border)}
+.all-row h4{font-size:15px;font-weight:700;margin:0 0 3px;color:var(--text)}
+.all-row .sub{font-size:12px;color:var(--muted);margin-bottom:8px}
+.all-stats{display:flex;gap:10px;font-size:13px;margin-bottom:7px;flex-wrap:wrap}
+/* Topbar */
+.topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--border)}
+.topbar h1{font-size:16px;font-weight:800;margin:0;color:var(--text);letter-spacing:-.3px}
+.theme-btn{background:none;border:1.5px solid var(--border);border-radius:20px;padding:5px 12px;cursor:pointer;font-size:12px;color:var(--text);font-weight:600}
+/* Modals */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;display:flex;align-items:flex-end;justify-content:center;padding:0}
+.sheet{background:var(--card);border-radius:16px 16px 0 0;padding:20px 16px 28px;width:100%;max-width:520px;max-height:88vh;overflow-y:auto}
+.sheet h3{margin:0 0 16px;font-size:16px;font-weight:700;color:var(--text)}
+.sheet-close{float:right;background:var(--row);border:none;border-radius:50%;width:28px;height:28px;font-size:16px;cursor:pointer;color:var(--muted);line-height:28px;text-align:center;margin-top:-2px}
+.subj-card{background:var(--row);border-radius:9px;padding:11px 13px;margin-bottom:7px;border:1px solid var(--border)}
+.subj-card .sc-top{display:flex;justify-content:space-between;align-items:flex-start}
+.subj-card .sc-name{font-weight:700;font-size:14px;color:var(--text)}
+.subj-card .sc-meta{font-size:12px;color:var(--muted);margin-top:3px}
+.divider{border:none;border-top:1px solid var(--border);margin:14px 0}
+.setup-note{font-size:12px;color:var(--muted);background:var(--stat);border-radius:8px;padding:10px 12px;margin-bottom:12px;line-height:1.5}
+/* timetable change panel hidden in settings */
+.tt-change-row{background:var(--row);border-radius:8px;padding:10px 12px;margin-bottom:8px;border:1px solid var(--border);font-size:13px}
+.tt-change-row .ttr-top{display:flex;justify-content:space-between;align-items:center}
+.time-chip{font-size:11px;color:var(--muted);margin-top:2px}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════ SETUP PAGE ═══════════════ -->
+<div id="pg-setup">
+  <div class="topbar">
+    <h1>📚 Attendance Tracker</h1>
+    <button class="theme-btn" id="theme-btn-setup" onclick="toggleTheme()">🌙 Dark</button>
+  </div>
+
+
+  <div class="card">
+    <h2>Semester details</h2>
     <label>Start date <span style="color:#aaa;font-weight:400"></span></label>
     <div style="display:flex;align-items:center;gap:6px;max-width:200px">
       <input type="text" id="inp-start" placeholder="mm/dd/yyyy" maxlength="10" inputmode="numeric" style="flex:1;min-width:0">
