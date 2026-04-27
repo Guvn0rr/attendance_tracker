@@ -127,10 +127,14 @@ input:focus,select:focus{border-color:#1a73e8}
 
   <div class="card">
     <h2>Semester details</h2>
-    <label>Start date <span style="color:#aaa;font-weight:400"></span></label>
-    <input type="date" id="inp-start">
-    <label>Number of weeks <span style="color:#aaa;font-weight:400">(optional)</span></label>
-    <input type="number" id="inp-weeks" value="16" min="1" max="60" style="max-width:110px">
+    <label>Start date <span style="color:#aaa;font-weight:400">(mm/dd/yyyy)</span></label>
+    <div style="display:flex;align-items:center;gap:6px;max-width:200px">
+      <input type="text" id="inp-start" placeholder="mm/dd/yyyy" maxlength="10" inputmode="numeric" style="flex:1;min-width:0">
+      <input type="date" id="inp-start-picker" style="position:absolute;opacity:0;width:0;height:0;pointer-events:none" tabindex="-1">
+      <button type="button" id="inp-start-cal" title="Pick a date" style="background:var(--row);border:1px solid var(--inpb);border-radius:7px;padding:7px 9px;cursor:pointer;font-size:15px;line-height:1;color:var(--text);flex-shrink:0">📅</button>
+    </div>
+    <label>Number of weeks <span style="color:#aaa;font-weight:400">(optional — how many weeks is your semester?)</span></label>
+    <input type="number" id="inp-weeks" value="0" min="0" max="60" style="max-width:110px">
   </div>
 
   <div class="card">
@@ -141,8 +145,8 @@ input:focus,select:focus{border-color:#1a73e8}
         <input type="text" id="inp-code" placeholder="CO2221">
       </div>
       <div>
-        <label>Hours / session</label>
-        <input type="number" id="inp-hrs" value="2" min="0.5" step="0.5">
+        <label>Hours</label>
+        <input type="number" id="inp-hrs" value="0" min="0" step="0.5">
       </div>
     </div>
     <label>Subject name <span style="color:#aaa;font-weight:400">(optional)</span></label>
@@ -352,6 +356,44 @@ function applyTheme(){
 // ═══════════════════════════════════════════
 // SETUP PAGE
 // ═══════════════════════════════════════════
+// Start date: text input auto-format + calendar picker sync
+document.getElementById('inp-start').addEventListener('input', function(){
+  var v=this.value.replace(/[^0-9]/g,'');
+  if(v.length>=3&&v.length<=4) v=v.slice(0,2)+'/'+v.slice(2);
+  else if(v.length>4) v=v.slice(0,2)+'/'+v.slice(2,4)+'/'+v.slice(4,8);
+  this.value=v;
+  // sync to hidden date picker when complete
+  if(v.length===10){
+    var p=v.split('/');
+    if(p.length===3&&p[2].length===4){
+      document.getElementById('inp-start-picker').value=p[2]+'-'+p[0]+'-'+p[1];
+    }
+  }
+});
+// Calendar icon opens native picker
+document.getElementById('inp-start-cal').addEventListener('click', function(){
+  var picker=document.getElementById('inp-start-picker');
+  picker.style.position='fixed';
+  picker.style.opacity='0';
+  picker.style.width='1px';
+  picker.style.height='1px';
+  picker.style.top='0';
+  picker.style.left='0';
+  picker.style.pointerEvents='auto';
+  picker.showPicker ? picker.showPicker() : picker.click();
+});
+document.getElementById('inp-start-picker').addEventListener('change', function(){
+  var v=this.value; // yyyy-mm-dd
+  if(v){
+    var p=v.split('-');
+    document.getElementById('inp-start').value=p[1]+'/'+p[2]+'/'+p[0];
+  }
+  this.style.position='absolute';
+  this.style.width='0';
+  this.style.height='0';
+  this.style.pointerEvents='none';
+});
+
 document.querySelectorAll('.day-btn[data-d]').forEach(function(el){
   el.onclick=function(){
     this.classList.toggle('active');
@@ -402,18 +444,26 @@ document.getElementById('btn-add-subj').onclick=function(){
   // reset
   document.getElementById('inp-code').value='';
   document.getElementById('inp-name').value='';
-  document.getElementById('inp-hrs').value='2';
+  document.getElementById('inp-hrs').value='0';
   document.querySelectorAll('.day-btn[data-d]').forEach(function(el){ el.classList.remove('active'); });
   document.getElementById('time-slots-wrap').classList.add('hidden');
   renderSubjList();
 };
 
 document.getElementById('btn-start').onclick=function(){
-  var start=document.getElementById('inp-start').value;
+  var raw=document.getElementById('inp-start').value.trim();
   var weeksVal=document.getElementById('inp-weeks').value;
-  var weeks=weeksVal?parseInt(weeksVal)||16:16;
+  var weeks=weeksVal!==''?parseInt(weeksVal)||0:0;
   var err=document.getElementById('start-err');
-  if(!start){ showErr('start-err','Enter the semester start date.'); return; }
+  if(!raw){ showErr('start-err','Enter the semester start date.'); return; }
+  // parse mm/dd/yyyy → yyyy-mm-dd
+  var parts=raw.split('/');
+  var start='';
+  if(parts.length===3 && parts[2].length===4){
+    start=parts[2]+'-'+(parts[0].length<2?'0'+parts[0]:parts[0])+'-'+(parts[1].length<2?'0'+parts[1]:parts[1]);
+  } else {
+    showErr('start-err','Enter date as mm/dd/yyyy.'); return;
+  }
   if(!db.subjects.length){ showErr('start-err','Add at least one subject first.'); return; }
   err.classList.add('hidden');
   db.start=start; db.weeks=weeks; saveDB();
@@ -712,7 +762,13 @@ function renderSettings(){
 function goSetup(){
   document.getElementById('pg-main').classList.add('hidden');
   document.getElementById('pg-setup').classList.remove('hidden');
-  document.getElementById('inp-start').value=db.start||'';
+  // convert stored yyyy-mm-dd back to mm/dd/yyyy for display
+  var _ds=db.start||'';
+  if(_ds.length===10&&_ds[4]==='-'){
+    var _p=_ds.split('-');
+    _ds=_p[1]+'/'+_p[2]+'/'+_p[0];
+  }
+  document.getElementById('inp-start').value=_ds;
   document.getElementById('inp-weeks').value=db.weeks||16;
   document.getElementById('btn-start').textContent='Save & continue →';
   document.getElementById('setup-note').textContent='Editing your setup — tap "Save & continue" when done.';
@@ -937,9 +993,6 @@ applyTheme();
 if(db.start && db.subjects.length){
   showMain();
 } else {
-  var _n=new Date(), _dow=_n.getDay(), _diff=_n.getDate()-(_dow===0?6:_dow-1);
-  var _m=new Date(_n); _m.setDate(_diff);
-  document.getElementById('inp-start').value=dStr(_m);
   renderSubjList();
 }
 </script>
