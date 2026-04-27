@@ -263,8 +263,8 @@ var DAYSFULL = ['Monday','Tuesday','Wednesday','Thursday','Friday'];
 function dStr(d){ var y=d.getFullYear(),m=d.getMonth()+1,day=d.getDate(); return y+'-'+(m<10?'0'+m:m)+'-'+(day<10?'0'+day:day); }
 function pDate(s){ var p=s.split('-'); return new Date(+p[0],+p[1]-1,+p[2]); }
 function todayS(){ return dStr(new Date()); }
-function fmtD(s){ return pDate(s).toLocaleDateString('en-GB',{day:'numeric',month:'short'}); }
-function fmtDL(s){ return pDate(s).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}); }
+function fmtD(s){ var d=pDate(s),m=d.getMonth()+1,day=d.getDate(); return (m<10?'0'+m:m)+'/'+(day<10?'0'+day:day); }
+function fmtDL(s){ var d=pDate(s),m=d.getMonth()+1,day=d.getDate(),y=d.getFullYear(); return (m<10?'0'+m:m)+'/'+(day<10?'0'+day:day)+'/'+y; }
 function getDow(s){ var d=pDate(s).getDay(); if(d===0||d===6) return null; return DAYS[d-1]; }
 function getWk(s){ if(!db.start) return null; var diff=Math.floor((pDate(s)-pDate(db.start))/(7*864e5)); if(diff<0||diff>=db.weeks) return null; return diff+1; }
 function rKey(id,s){ return id+'_'+s; }
