@@ -1677,8 +1677,10 @@ function buildPhotoPrompt(){
 '- Do NOT include staff or instructor names in the CSV\n\n'+
 'Output ONLY the raw CSV text. No explanation, no markdown code fences, no extra text. Just the CSV starting with the header row.';
 
-  document.getElementById('photo-prompt-text').value=prompt;
-  document.getElementById('photo-prompt-wrap').style.display='block';
+  var ta=document.getElementById('photo-prompt-text');
+  if(ta) ta.value=prompt;
+  var wrap=document.getElementById('photo-prompt-wrap');
+  if(wrap) wrap.style.display='block';
 }
 
 function copyPhotoPrompt(){
@@ -1696,7 +1698,6 @@ function copyPhotoPrompt(){
 
 loadDB();
 loadCatalogue();
-buildPhotoPrompt();
 try{ isDark=localStorage.getItem('ltr_theme')==='dark'; }catch(e){}
 applyTheme();
 
@@ -1708,6 +1709,8 @@ if(db.start && db.subjects.length){
   renderSubjList();
   renderCatalogue();
 }
+
+try{ buildPhotoPrompt(); }catch(e){}
 </script>
 </body>
 </html>
