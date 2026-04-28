@@ -150,121 +150,151 @@ input:focus,select:focus{border-color:#1a73e8}
     <input type="number" id="inp-weeks" value="0" min="0" max="60" style="max-width:110px">
   </div>
 
-  <!-- ─── PHOTO SCAN ─── -->
-  <div class="card" id="card-photo-scan">
-    <h2>📸 Scan timetable from photo</h2>
-    <p style="font-size:12px;color:var(--muted);margin:0 0 12px;line-height:1.5">Photograph your printed timetable, get an AI prompt, then paste the AI's response back here to instantly download a ready-to-use CSV file.</p>
+  <!-- ─── AI IMPORT ─── -->
+  <div class="card" id="card-ai-import">
+    <h2>🤖 Import Timetable via AI chatbot</h2>
+    <p style="font-size:12px;color:var(--muted);margin:0 0 12px;line-height:1.5">Copy the prompt below, open any AI chatbot (ChatGPT, Claude, Gemini…), attach your timetable photo and send. Then paste the AI's reply here — subjects will be added instantly.</p>
 
-    <!-- STEP 1 -->
-    <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:6px">Step 1 — Upload your timetable photo</div>
-    <div class="upload-box" id="photo-drop-zone" onclick="document.getElementById('photo-file-inp').click()">
-      <div class="ub-icon" id="photo-preview-icon">🖼️</div>
-      <img id="photo-preview-img" style="display:none;max-width:100%;max-height:160px;border-radius:8px;margin-bottom:6px;object-fit:contain">
-      <div class="ub-txt" id="photo-ub-txt">Tap to choose timetable photo</div>
-      <div class="ub-hint" id="photo-ub-hint">Accepts .jpg, .jpeg, .png, .webp, .heic</div>
-      <input type="file" id="photo-file-inp" accept="image/*" style="display:none" onchange="handlePhotoFile(this.files[0])">
+    <!-- STEP 1: prompt -->
+    <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:6px">Step 1 — Copy this prompt &amp; send it with your timetable photo to any AI chatbot</div>
+    <div style="position:relative">
+      <textarea id="photo-prompt-text" readonly rows="7"
+        style="width:100%;padding:10px 12px;padding-right:76px;border:1.5px solid var(--inpb);border-radius:9px;font-size:11px;background:var(--inp);color:var(--text);resize:none;line-height:1.5;font-family:monospace"></textarea>
+      <button onclick="copyPhotoPrompt()" id="copy-prompt-btn"
+        style="position:absolute;top:8px;right:8px;padding:5px 10px;background:#1a73e8;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">📋 Copy</button>
     </div>
+    <div id="copy-ok" class="ok hidden" style="margin-top:4px">✓ Copied to clipboard!</div>
 
-    <div id="photo-prompt-wrap" style="display:none;margin-top:14px">
-
-      <!-- STEP 2 -->
-      <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:6px">Step 2 — Copy this prompt &amp; send it with your photo to any AI chatbot</div>
-      <div style="position:relative">
-        <textarea id="photo-prompt-text" readonly rows="6"
-          style="width:100%;padding:10px 12px;padding-right:80px;border:1.5px solid var(--inpb);border-radius:9px;font-size:11px;background:var(--inp);color:var(--text);resize:none;line-height:1.5;font-family:monospace"></textarea>
-        <button onclick="copyPhotoPrompt()" id="copy-prompt-btn"
-          style="position:absolute;top:8px;right:8px;padding:5px 11px;background:#1a73e8;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">📋 Copy</button>
-      </div>
-      <div id="copy-ok" class="ok hidden" style="margin-top:4px">✓ Copied to clipboard!</div>
-
-      <!-- STEP 3 -->
-      <div style="font-size:12px;font-weight:700;color:var(--text);margin-top:14px;margin-bottom:6px">Step 3 — Paste the AI's reply here &amp; download as CSV</div>
-      <p style="font-size:11px;color:var(--muted);margin:0 0 7px;line-height:1.5">The AI will reply with CSV text. Paste it below and click download — you'll get a real <b>.csv file</b> to upload in <b>"Upload timetable"</b> below.</p>
-      <textarea id="csv-paste-area" rows="6" placeholder="Paste the AI's CSV response here…"
-        style="width:100%;padding:10px 12px;border:1.5px solid var(--inpb);border-radius:9px;font-size:11px;background:var(--inp);color:var(--text);resize:vertical;line-height:1.5;font-family:monospace"
-        oninput="onCsvPaste()"></textarea>
-      <div id="csv-paste-err" class="err hidden" style="margin-top:4px"></div>
-      <button id="btn-download-csv" class="btn btn-purple hidden" style="margin-top:8px" onclick="downloadPastedCSV()">⬇ Download as timetable.csv</button>
-      <div id="csv-paste-ok" class="ok hidden" style="margin-top:4px">✓ CSV saved — now upload it in "Upload timetable" below.</div>
-    </div>
-  </div>
-
-  <!-- ─── TIMETABLE UPLOAD ─── -->
-  <div class="card">
-    <h2>📅 Upload timetable <span style="font-size:12px;font-weight:400;color:var(--muted)">(auto-setup)</span></h2>
-    <p style="font-size:12px;color:var(--muted);margin:0 0 10px;line-height:1.5">Upload a CSV or JSON file and all subjects will be created automatically. Download a template below to get started.</p>
-    <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
-      <button class="btn btn-grey btn-sm" style="margin:0" onclick="downloadTTTemplate('csv')">⬇ CSV template</button>
-      <button class="btn btn-grey btn-sm" style="margin:0" onclick="downloadTTTemplate('json')">⬇ JSON template</button>
-    </div>
-    <div class="upload-box" id="tt-drop-zone" onclick="document.getElementById('tt-file-inp').click()">
-      <div class="ub-icon">📁</div>
-      <div class="ub-txt">Tap to choose file, or drag & drop</div>
-      <div class="ub-hint">Accepts .csv or .json</div>
-      <input type="file" id="tt-file-inp" accept=".csv,.json" style="display:none" onchange="handleTTFile(this.files[0])">
-    </div>
-    <div id="tt-preview"></div>
-    <div id="tt-err" class="err hidden"></div>
-    <button class="btn btn-green hidden" id="btn-apply-tt" onclick="applyTimetable()">✓ Apply timetable & add subjects</button>
+    <!-- STEP 2: paste & apply -->
+    <div style="font-size:12px;font-weight:700;color:var(--text);margin-top:14px;margin-bottom:6px">Step 2 — Paste the AI's reply &amp; apply directly</div>
+    <p style="font-size:11px;color:var(--muted);margin:0 0 7px;line-height:1.5">Paste the CSV text the AI returns below. Subjects will be loaded into the app right away — no file needed.</p>
+    <textarea id="csv-paste-area" rows="6" placeholder="Paste the AI's CSV response here…"
+      style="width:100%;padding:10px 12px;border:1.5px solid var(--inpb);border-radius:9px;font-size:11px;background:var(--inp);color:var(--text);resize:vertical;line-height:1.5;font-family:monospace"
+      oninput="onCsvPaste()"></textarea>
+    <div id="csv-paste-err" class="err hidden" style="margin-top:4px"></div>
+    <div id="ai-tt-preview" style="margin-top:6px"></div>
+    <button id="btn-apply-ai-csv" class="btn btn-green hidden" style="margin-top:8px" onclick="applyAiCsv()">✓ Apply — add subjects to app</button>
+    <div id="csv-paste-ok" class="ok hidden" style="margin-top:6px">✓ Subjects added successfully!</div>
   </div>
 
   <div id="start-err" class="err hidden"></div>
   <button class="btn btn-green" id="btn-start" style="margin-top:12px;margin-bottom:12px">Start tracking →</button>
 
-  <!-- ─── ADD SUBJECT MANUALLY ─── -->
-  <!-- Use this section to manually enter subject details one by one.
-       Fill in the code, name, hours, select the days it runs, and
-       optionally set the start/end times for each day. -->
-  <div class="card">
-    <h2>➕ Add a subject <span style="font-size:12px;font-weight:400;color:var(--muted)">(manual entry)</span></h2>
-    <div class="row2">
-      <div>
-        <label>Subject code</label>
-        <input type="text" id="inp-code" placeholder="CO2221">
+  <!-- ─── TIMETABLE UPLOAD (collapsible) ─── -->
+  <button class="btn btn-grey" id="btn-toggle-tt-upload" onclick="toggleTTUpload()"
+    style="width:100%;margin-bottom:4px;display:flex;align-items:center;justify-content:center;gap:8px;font-size:13px">
+    📁 Upload timetable file <span id="tt-upload-chevron" style="font-size:11px">▼</span>
+  </button>
+  <div id="tt-upload-section" style="display:none">
+    <div class="card">
+      <h2>📅 Upload timetable <span style="font-size:12px;font-weight:400;color:var(--muted)">(CSV / JSON file)</span></h2>
+      <p style="font-size:12px;color:var(--muted);margin:0 0 10px;line-height:1.5">Already have a CSV or JSON file? Upload it here and all subjects will be created automatically.</p>
+      <div class="upload-box" id="tt-drop-zone" onclick="document.getElementById('tt-file-inp').click()">
+        <div class="ub-icon">📁</div>
+        <div class="ub-txt">Tap to choose file, or drag & drop</div>
+        <div class="ub-hint">Accepts .csv or .json</div>
+        <input type="file" id="tt-file-inp" accept=".csv,.json" style="display:none" onchange="handleTTFile(this.files[0])">
       </div>
-      <div>
-        <label>Hours</label>
-        <input type="number" id="inp-hrs" value="0" min="0" step="0.5">
-      </div>
+      <div id="tt-preview"></div>
+      <div id="tt-err" class="err hidden"></div>
+      <button class="btn btn-green hidden" id="btn-apply-tt" onclick="applyTimetable()">✓ Apply timetable & add subjects</button>
     </div>
-    <label>Subject name <span style="color:#aaa;font-weight:400">(optional)</span></label>
-    <input type="text" id="inp-name" placeholder="Software Engineering">
-    <label>Days — tap to select</label>
-    <div class="day-row">
-      <div class="day-btn" data-d="Mon">Mon</div>
-      <div class="day-btn" data-d="Tue">Tue</div>
-      <div class="day-btn" data-d="Wed">Wed</div>
-      <div class="day-btn" data-d="Thu">Thu</div>
-      <div class="day-btn" data-d="Fri">Fri</div>
-    </div>
-    <!-- Time slots per selected day -->
-    <div id="time-slots-wrap" class="hidden">
-      <label>Session times <span style="color:#aaa;font-weight:400">(optional)</span></label>
-      <div id="time-slots"></div>
-    </div>
-    <div id="add-err" class="err hidden"></div>
-    <button class="btn" id="btn-add-subj">+ Add subject</button>
   </div>
 
-  <div id="subj-list"></div>
-
-  <!-- ─── COURSE CATALOGUE ─── -->
-  <div class="card">
-    <h2>📋 Course catalogue <span style="font-size:12px;font-weight:400;color:var(--muted)">(optional)</span></h2>
-    <p style="font-size:12px;color:var(--muted);margin:0 0 10px;line-height:1.5">Save course codes + names so you can pick them quickly when adding subjects. These are stored locally and never uploaded.</p>
-    <div id="cat-list"></div>
-    <div class="cat-row" id="cat-new-row" style="margin-top:6px">
-      <input type="text" id="cat-code-inp" placeholder="Course code e.g. CO2221" style="max-width:130px;flex:none">
-      <input type="text" id="cat-name-inp" placeholder="Course name">
-      <button class="btn btn-outline btn-sm" style="margin:0;flex:none;white-space:nowrap" onclick="addCatEntry()">+ Add</button>
-    </div>
-    <div id="cat-err" class="err hidden"></div>
-    <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
-      <button class="btn btn-grey btn-sm" style="margin:0" onclick="loadCatToForm()">↙ Use selected in subject form</button>
-      <button class="btn btn-grey btn-sm" style="margin:0" onclick="exportCatalogue()">💾 Export catalogue</button>
-      <label class="btn btn-grey btn-sm" style="margin:0;cursor:pointer">📂 Import catalogue<input type="file" accept=".json,.csv" style="display:none" onchange="importCatalogue(this)"></label>
+  <!-- ─── SHARE TIMETABLE ─── -->
+  <button class="btn btn-grey" id="btn-toggle-share" onclick="toggleShareTT()"
+    style="width:100%;margin-bottom:4px;display:flex;align-items:center;justify-content:center;gap:8px;font-size:13px">
+    🔗 Share my timetable <span id="share-tt-chevron" style="font-size:11px">▼</span>
+  </button>
+  <div id="share-tt-section" style="display:none">
+    <div class="card">
+      <h2>🔗 Share timetable</h2>
+      <p style="font-size:12px;color:var(--muted);margin:0 0 12px;line-height:1.5">Generate a shareable link or text block so a classmate can import your exact timetable into their LecTracker app.</p>
+      <button class="btn btn-outline" onclick="generateShareLink()">📋 Generate share code</button>
+      <div id="share-tt-out" style="display:none;margin-top:12px">
+        <p style="font-size:12px;color:var(--muted);margin:0 0 6px">Share this code with your friend. They paste it in the <b>Import Timetable via AI chatbot</b> → Step 2 box, or use the Import code button below.</p>
+        <textarea id="share-tt-text" readonly rows="5"
+          style="width:100%;padding:10px 12px;border:1.5px solid var(--inpb);border-radius:9px;font-size:11px;background:var(--inp);color:var(--text);resize:none;line-height:1.5;font-family:monospace"></textarea>
+        <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+          <button class="btn btn-green btn-sm" style="margin:0" onclick="copyShareCode()">📋 Copy code</button>
+          <div id="share-copy-ok" class="ok hidden" style="line-height:32px">✓ Copied!</div>
+        </div>
+      </div>
+      <hr class="divider">
+      <p style="font-size:12px;font-weight:700;color:var(--text);margin:0 0 6px">Import a friend's code</p>
+      <p style="font-size:12px;color:var(--muted);margin:0 0 7px;line-height:1.5">Paste a timetable share code from a classmate below to import their subjects.</p>
+      <textarea id="import-share-text" rows="4" placeholder="Paste share code here…"
+        style="width:100%;padding:10px 12px;border:1.5px solid var(--inpb);border-radius:9px;font-size:11px;background:var(--inp);color:var(--text);resize:vertical;line-height:1.5;font-family:monospace"></textarea>
+      <div id="import-share-err" class="err hidden" style="margin-top:4px"></div>
+      <button class="btn btn-green" style="margin-top:8px" onclick="importShareCode()">✓ Import timetable from code</button>
+      <div id="import-share-ok" class="ok hidden" style="margin-top:6px"></div>
     </div>
   </div>
+
+  <!-- ─── MANUAL ENTRY TOGGLE ─── -->
+  <button class="btn btn-grey" id="btn-toggle-manual" onclick="toggleManual()"
+    style="width:100%;margin-bottom:4px;display:flex;align-items:center;justify-content:center;gap:8px;font-size:13px">
+    ✏️ Add details manually <span id="manual-chevron" style="font-size:11px">▼</span>
+  </button>
+
+  <!-- ─── MANUAL ENTRY SECTION (hidden by default) ─── -->
+  <div id="manual-section" style="display:none">
+
+    <!-- Use this section to manually enter subject details one by one.
+         Fill in the code, name, hours, select the days it runs, and
+         optionally set the start/end times for each day. -->
+    <div class="card">
+      <h2>➕ Add a subject <span style="font-size:12px;font-weight:400;color:var(--muted)">(manual entry)</span></h2>
+      <div class="row2">
+        <div>
+          <label>Subject code</label>
+          <input type="text" id="inp-code" placeholder="CO2221">
+        </div>
+        <div>
+          <label>Hours</label>
+          <input type="number" id="inp-hrs" value="0" min="0" step="0.5">
+        </div>
+      </div>
+      <label>Subject name <span style="color:#aaa;font-weight:400">(optional)</span></label>
+      <input type="text" id="inp-name" placeholder="Software Engineering">
+      <label>Days — tap to select</label>
+      <div class="day-row">
+        <div class="day-btn" data-d="Mon">Mon</div>
+        <div class="day-btn" data-d="Tue">Tue</div>
+        <div class="day-btn" data-d="Wed">Wed</div>
+        <div class="day-btn" data-d="Thu">Thu</div>
+        <div class="day-btn" data-d="Fri">Fri</div>
+      </div>
+      <!-- Time slots per selected day -->
+      <div id="time-slots-wrap" class="hidden">
+        <label>Session times <span style="color:#aaa;font-weight:400">(optional)</span></label>
+        <div id="time-slots"></div>
+      </div>
+      <div id="add-err" class="err hidden"></div>
+      <button class="btn" id="btn-add-subj">+ Add subject</button>
+    </div>
+
+    <div id="subj-list"></div>
+
+    <!-- ─── COURSE CATALOGUE ─── -->
+    <div class="card">
+      <h2>📋 Course catalogue <span style="font-size:12px;font-weight:400;color:var(--muted)">(optional)</span></h2>
+      <p style="font-size:12px;color:var(--muted);margin:0 0 10px;line-height:1.5">Save course codes + names so you can pick them quickly when adding subjects. These are stored locally and never uploaded.</p>
+      <div id="cat-list"></div>
+      <div class="cat-row" id="cat-new-row" style="margin-top:6px">
+        <input type="text" id="cat-code-inp" placeholder="Course code e.g. CO2221" style="max-width:130px;flex:none">
+        <input type="text" id="cat-name-inp" placeholder="Course name">
+        <button class="btn btn-outline btn-sm" style="margin:0;flex:none;white-space:nowrap" onclick="addCatEntry()">+ Add</button>
+      </div>
+      <div id="cat-err" class="err hidden"></div>
+      <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-grey btn-sm" style="margin:0" onclick="loadCatToForm()">↙ Use selected in subject form</button>
+        <button class="btn btn-grey btn-sm" style="margin:0" onclick="exportCatalogue()">💾 Export catalogue</button>
+        <label class="btn btn-grey btn-sm" style="margin:0;cursor:pointer">📂 Import catalogue<input type="file" accept=".json,.csv" style="display:none" onchange="importCatalogue(this)"></label>
+      </div>
+    </div>
+
+  </div><!-- end #manual-section -->
 
 </div>
 
@@ -1428,29 +1458,200 @@ function handlePhotoFile(file){
   document.getElementById('photo-file-inp').value='';
 }
 
+function toggleManual(){
+  var sec=document.getElementById('manual-section');
+  var chev=document.getElementById('manual-chevron');
+  var open=sec.style.display!=='none';
+  sec.style.display=open?'none':'block';
+  chev.textContent=open?'▼':'▲';
+}
+
+function toggleTTUpload(){
+  var sec=document.getElementById('tt-upload-section');
+  var chev=document.getElementById('tt-upload-chevron');
+  var open=sec.style.display!=='none';
+  sec.style.display=open?'none':'block';
+  chev.textContent=open?'▼':'▲';
+}
+
+function toggleShareTT(){
+  var sec=document.getElementById('share-tt-section');
+  var chev=document.getElementById('share-tt-chevron');
+  var open=sec.style.display!=='none';
+  sec.style.display=open?'none':'block';
+  chev.textContent=open?'▼':'▲';
+}
+
+function generateShareLink(){
+  if(!db.subjects.length){ alert('No subjects to share yet. Add subjects first.'); return; }
+  // Build a compact CSV share code
+  var lines=['code,name,hours,days,start_time,end_time'];
+  db.subjects.forEach(function(s){
+    var days=s.days.join(',');
+    var start='', end='';
+    // pick first day's time if available
+    var firstDay=s.days[0];
+    if(s.times && s.times[firstDay]){ start=s.times[firstDay].start||''; end=s.times[firstDay].end||''; }
+    lines.push([s.code, s.name||'', s.hours, '"'+days+'"', start, end].join(','));
+  });
+  var code=lines.join('\n');
+  document.getElementById('share-tt-text').value=code;
+  document.getElementById('share-tt-out').style.display='block';
+}
+
+function copyShareCode(){
+  var txt=document.getElementById('share-tt-text').value;
+  if(!txt) return;
+  var ok=function(){
+    var el=document.getElementById('share-copy-ok');
+    el.classList.remove('hidden');
+    setTimeout(function(){ el.classList.add('hidden'); }, 2500);
+  };
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(txt).then(ok).catch(function(){
+      document.getElementById('share-tt-text').select(); try{document.execCommand('copy');ok();}catch(e){}
+    });
+  } else {
+    document.getElementById('share-tt-text').select(); try{document.execCommand('copy');ok();}catch(e){}
+  }
+}
+
+function importShareCode(){
+  var txt=(document.getElementById('import-share-text').value||'').trim();
+  txt=txt.replace(/^```[a-z]*\n?/i,'').replace(/\n?```$/,'').trim();
+  var err=document.getElementById('import-share-err');
+  var ok=document.getElementById('import-share-ok');
+  err.classList.add('hidden'); ok.classList.add('hidden');
+  if(!txt){ err.textContent='⚠ Paste a share code first.'; err.classList.remove('hidden'); return; }
+  if(txt.indexOf(',')===-1){ err.textContent='⚠ Doesn\'t look like a valid share code.'; err.classList.remove('hidden'); return; }
+  try{
+    var lines=txt.split('\n');
+    if(lines.length<2) throw new Error('Need at least a header row and one data row.');
+    var headers=lines[0].split(',').map(function(h){ return h.trim().toLowerCase().replace(/"/g,''); });
+    var rows=lines.slice(1).map(function(line){
+      var cols=splitCSVRow(line);
+      var obj={};
+      headers.forEach(function(h,i){ obj[h]=cols[i]?cols[i].trim().replace(/^"|"$/g,''):''; });
+      return obj;
+    }).filter(function(r){ return r.code||r['subject code']||r['course code']; });
+    if(!rows.length) throw new Error('No valid rows found.');
+    var parsed=[];
+    rows.forEach(function(row){
+      var code=(row.code||row['subject code']||row['course code']||'').trim().toUpperCase();
+      if(!code) return;
+      var subj_name=row.name||row['subject name']||row['course name']||'';
+      var hours=parseFloat(row.hours||row['credit hours']||row['hrs']||2)||2;
+      var daysRaw=row.days||row.day||'';
+      var days=daysRaw?daysRaw.split(/[,;\/\s]+/).map(function(d){ return normDay(d); }).filter(Boolean):[];
+      if(!days.length) return;
+      var times={};
+      days.forEach(function(d){
+        var startV=row[d.toLowerCase()+'_start']||row['start']||row['start_time']||'';
+        var endV=row[d.toLowerCase()+'_end']||row['end']||row['end_time']||'';
+        if(startV||endV) times[d]={start:startV,end:endV};
+      });
+      parsed.push({code:code,name:subj_name,hours:hours,days:days,times:times});
+    });
+    if(!parsed.length) throw new Error('Could not find any valid subjects in the code.');
+    var added=0, skipped=0;
+    parsed.forEach(function(s){
+      if(db.subjects.find(function(x){ return x.code===s.code; })){ skipped++; return; }
+      db.subjects.push({id:Date.now()+Math.random(),code:s.code,name:s.name,hours:s.hours,days:s.days,times:s.times});
+      added++;
+      if(!catalogue.find(function(c){ return c.code===s.code; })) catalogue.push({code:s.code,name:s.name});
+    });
+    saveCatalogue(); saveDB(); renderSubjList(); renderCatalogue();
+    document.getElementById('import-share-text').value='';
+    ok.textContent='✓ Imported '+added+' subject(s)'+(skipped?' ('+skipped+' already existed, skipped)':'')+'!';
+    ok.classList.remove('hidden');
+  } catch(e){
+    err.textContent='⚠ '+e.message;
+    err.classList.remove('hidden');
+  }
+}
+
 function onCsvPaste(){
   var txt=(document.getElementById('csv-paste-area').value||'').trim();
-  var btn=document.getElementById('btn-download-csv');
+  txt=txt.replace(/^```[a-z]*\n?/i,'').replace(/\n?```$/,'').trim();
   var err=document.getElementById('csv-paste-err');
+  var btn=document.getElementById('btn-apply-ai-csv');
   var ok=document.getElementById('csv-paste-ok');
   err.classList.add('hidden');
   ok.classList.add('hidden');
-  if(!txt){ btn.classList.add('hidden'); return; }
-  txt=txt.replace(/^```[a-z]*\n?/i,'').replace(/\n?```$/,'').trim();
-  if(txt.indexOf(',')===-1){ err.textContent='⚠ Doesn\'t look like CSV — paste the AI\'s raw text output.'; err.classList.remove('hidden'); btn.classList.add('hidden'); return; }
-  btn.classList.remove('hidden');
+  document.getElementById('ai-tt-preview').innerHTML='';
+  btn.classList.add('hidden');
+  if(!txt) return;
+  if(txt.indexOf(',')===-1){
+    err.textContent='⚠ Doesn\'t look like CSV — make sure you paste the AI\'s raw text output.';
+    err.classList.remove('hidden'); return;
+  }
+  // reuse existing parser — feed it as a fake .csv
+  _ttParsed=[];
+  try{
+    var lines=txt.split('\n');
+    if(lines.length<2) throw new Error('Need at least a header row and one data row.');
+    var headers=lines[0].split(',').map(function(h){ return h.trim().toLowerCase().replace(/"/g,''); });
+    var rows=lines.slice(1).map(function(line){
+      var cols=splitCSVRow(line);
+      var obj={};
+      headers.forEach(function(h,i){ obj[h]=cols[i]?cols[i].trim().replace(/^"|"$/g,''):''; });
+      return obj;
+    }).filter(function(r){ return r.code||r['subject code']||r['course code']; });
+    if(!rows.length) throw new Error('No valid rows found.');
+    rows.forEach(function(row){
+      var code=(row.code||row['subject code']||row['course code']||'').trim().toUpperCase();
+      if(!code) return;
+      var subj_name=row.name||row['subject name']||row['course name']||'';
+      var hours=parseFloat(row.hours||row['credit hours']||row['hrs']||2)||2;
+      var daysRaw=row.days||row.day||'';
+      var days=daysRaw?daysRaw.split(/[,;\/\s]+/).map(function(d){ return normDay(d); }).filter(Boolean):[];
+      if(!days.length) return;
+      var times={};
+      days.forEach(function(d){
+        var startV=row[d.toLowerCase()+'_start']||row['start']||row['start_time']||'';
+        var endV=row[d.toLowerCase()+'_end']||row['end']||row['end_time']||'';
+        if(startV||endV) times[d]={start:startV,end:endV};
+      });
+      _ttParsed.push({code:code,name:subj_name,hours:hours,days:days,times:times});
+    });
+    if(!_ttParsed.length) throw new Error('Could not find any valid subjects.');
+    // preview
+    var h='<p style="font-size:12px;color:#1D9E75;font-weight:600;margin:6px 0">✓ Found '+_ttParsed.length+' subject(s) — ready to apply:</p>'
+      +'<div style="overflow-x:auto"><table class="preview-table"><thead><tr>'
+      +'<th>Code</th><th>Name</th><th>Hrs</th><th>Days</th></tr></thead><tbody>';
+    _ttParsed.forEach(function(s){
+      h+='<tr><td><b>'+esc(s.code)+'</b></td><td>'+esc(s.name)+'</td><td>'+s.hours+'</td>'
+        +'<td>'+s.days.map(function(d){ return '<span class="badge-day">'+d+'</span>'; }).join('')+'</td></tr>';
+    });
+    h+='</tbody></table></div>';
+    document.getElementById('ai-tt-preview').innerHTML=h;
+    btn.classList.remove('hidden');
+  } catch(e){
+    err.textContent='⚠ '+e.message;
+    err.classList.remove('hidden');
+  }
 }
 
-function downloadPastedCSV(){
-  var txt=(document.getElementById('csv-paste-area').value||'').trim();
-  txt=txt.replace(/^```[a-z]*\n?/i,'').replace(/\n?```$/,'').trim();
-  if(!txt) return;
-  var a=document.createElement('a');
-  a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(txt);
-  a.download='timetable.csv';
-  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+function applyAiCsv(){
+  if(!_ttParsed.length) return;
+  var added=0, skipped=0;
+  _ttParsed.forEach(function(s){
+    if(db.subjects.find(function(x){ return x.code===s.code; })){ skipped++; return; }
+    db.subjects.push({id:Date.now()+Math.random(),code:s.code,name:s.name,hours:s.hours,days:s.days,times:s.times});
+    added++;
+    if(!catalogue.find(function(c){ return c.code===s.code; })) catalogue.push({code:s.code,name:s.name});
+  });
+  saveCatalogue(); saveDB(); renderSubjList(); renderCatalogue();
+  document.getElementById('ai-tt-preview').innerHTML='';
+  document.getElementById('btn-apply-ai-csv').classList.add('hidden');
+  document.getElementById('csv-paste-area').value='';
+  document.getElementById('csv-paste-ok').textContent='✓ Added '+added+' subject(s)'+(skipped?' ('+skipped+' skipped — already exist)':'')+'!';
   document.getElementById('csv-paste-ok').classList.remove('hidden');
+  _ttParsed=[];
 }
+
+function handlePhotoFile(file){ /* no longer used */ }
+function downloadPastedCSV(){ /* no longer used */ }
 
 function buildPhotoPrompt(){
   var prompt=
@@ -1492,6 +1693,7 @@ function copyPhotoPrompt(){
 
 loadDB();
 loadCatalogue();
+buildPhotoPrompt();
 try{ isDark=localStorage.getItem('ltr_theme')==='dark'; }catch(e){}
 applyTheme();
 
