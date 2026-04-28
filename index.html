@@ -150,8 +150,73 @@ input:focus,select:focus{border-color:#1a73e8}
     <input type="number" id="inp-weeks" value="0" min="0" max="60" style="max-width:110px">
   </div>
 
+  <!-- ─── PHOTO SCAN ─── -->
+  <div class="card" id="card-photo-scan">
+    <h2>📸 Scan timetable from photo</h2>
+    <p style="font-size:12px;color:var(--muted);margin:0 0 12px;line-height:1.5">Photograph your printed timetable, get an AI prompt, then paste the AI's response back here to instantly download a ready-to-use CSV file.</p>
+
+    <!-- STEP 1 -->
+    <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:6px">Step 1 — Upload your timetable photo</div>
+    <div class="upload-box" id="photo-drop-zone" onclick="document.getElementById('photo-file-inp').click()">
+      <div class="ub-icon" id="photo-preview-icon">🖼️</div>
+      <img id="photo-preview-img" style="display:none;max-width:100%;max-height:160px;border-radius:8px;margin-bottom:6px;object-fit:contain">
+      <div class="ub-txt" id="photo-ub-txt">Tap to choose timetable photo</div>
+      <div class="ub-hint" id="photo-ub-hint">Accepts .jpg, .jpeg, .png, .webp, .heic</div>
+      <input type="file" id="photo-file-inp" accept="image/*" style="display:none" onchange="handlePhotoFile(this.files[0])">
+    </div>
+
+    <div id="photo-prompt-wrap" style="display:none;margin-top:14px">
+
+      <!-- STEP 2 -->
+      <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:6px">Step 2 — Copy this prompt &amp; send it with your photo to any AI chatbot</div>
+      <div style="position:relative">
+        <textarea id="photo-prompt-text" readonly rows="6"
+          style="width:100%;padding:10px 12px;padding-right:80px;border:1.5px solid var(--inpb);border-radius:9px;font-size:11px;background:var(--inp);color:var(--text);resize:none;line-height:1.5;font-family:monospace"></textarea>
+        <button onclick="copyPhotoPrompt()" id="copy-prompt-btn"
+          style="position:absolute;top:8px;right:8px;padding:5px 11px;background:#1a73e8;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">📋 Copy</button>
+      </div>
+      <div id="copy-ok" class="ok hidden" style="margin-top:4px">✓ Copied to clipboard!</div>
+
+      <!-- STEP 3 -->
+      <div style="font-size:12px;font-weight:700;color:var(--text);margin-top:14px;margin-bottom:6px">Step 3 — Paste the AI's reply here &amp; download as CSV</div>
+      <p style="font-size:11px;color:var(--muted);margin:0 0 7px;line-height:1.5">The AI will reply with CSV text. Paste it below and click download — you'll get a real <b>.csv file</b> to upload in <b>"Upload timetable"</b> below.</p>
+      <textarea id="csv-paste-area" rows="6" placeholder="Paste the AI's CSV response here…"
+        style="width:100%;padding:10px 12px;border:1.5px solid var(--inpb);border-radius:9px;font-size:11px;background:var(--inp);color:var(--text);resize:vertical;line-height:1.5;font-family:monospace"
+        oninput="onCsvPaste()"></textarea>
+      <div id="csv-paste-err" class="err hidden" style="margin-top:4px"></div>
+      <button id="btn-download-csv" class="btn btn-purple hidden" style="margin-top:8px" onclick="downloadPastedCSV()">⬇ Download as timetable.csv</button>
+      <div id="csv-paste-ok" class="ok hidden" style="margin-top:4px">✓ CSV saved — now upload it in "Upload timetable" below.</div>
+    </div>
+  </div>
+
+  <!-- ─── TIMETABLE UPLOAD ─── -->
   <div class="card">
-    <h2>Add a subject</h2>
+    <h2>📅 Upload timetable <span style="font-size:12px;font-weight:400;color:var(--muted)">(auto-setup)</span></h2>
+    <p style="font-size:12px;color:var(--muted);margin:0 0 10px;line-height:1.5">Upload a CSV or JSON file and all subjects will be created automatically. Download a template below to get started.</p>
+    <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+      <button class="btn btn-grey btn-sm" style="margin:0" onclick="downloadTTTemplate('csv')">⬇ CSV template</button>
+      <button class="btn btn-grey btn-sm" style="margin:0" onclick="downloadTTTemplate('json')">⬇ JSON template</button>
+    </div>
+    <div class="upload-box" id="tt-drop-zone" onclick="document.getElementById('tt-file-inp').click()">
+      <div class="ub-icon">📁</div>
+      <div class="ub-txt">Tap to choose file, or drag & drop</div>
+      <div class="ub-hint">Accepts .csv or .json</div>
+      <input type="file" id="tt-file-inp" accept=".csv,.json" style="display:none" onchange="handleTTFile(this.files[0])">
+    </div>
+    <div id="tt-preview"></div>
+    <div id="tt-err" class="err hidden"></div>
+    <button class="btn btn-green hidden" id="btn-apply-tt" onclick="applyTimetable()">✓ Apply timetable & add subjects</button>
+  </div>
+
+  <div id="start-err" class="err hidden"></div>
+  <button class="btn btn-green" id="btn-start" style="margin-top:12px;margin-bottom:12px">Start tracking →</button>
+
+  <!-- ─── ADD SUBJECT MANUALLY ─── -->
+  <!-- Use this section to manually enter subject details one by one.
+       Fill in the code, name, hours, select the days it runs, and
+       optionally set the start/end times for each day. -->
+  <div class="card">
+    <h2>➕ Add a subject <span style="font-size:12px;font-weight:400;color:var(--muted)">(manual entry)</span></h2>
     <div class="row2">
       <div>
         <label>Subject code</label>
@@ -183,9 +248,6 @@ input:focus,select:focus{border-color:#1a73e8}
 
   <div id="subj-list"></div>
 
-  <div id="start-err" class="err hidden"></div>
-  <button class="btn btn-green" id="btn-start">Start tracking →</button>
-
   <!-- ─── COURSE CATALOGUE ─── -->
   <div class="card">
     <h2>📋 Course catalogue <span style="font-size:12px;font-weight:400;color:var(--muted)">(optional)</span></h2>
@@ -202,25 +264,6 @@ input:focus,select:focus{border-color:#1a73e8}
       <button class="btn btn-grey btn-sm" style="margin:0" onclick="exportCatalogue()">💾 Export catalogue</button>
       <label class="btn btn-grey btn-sm" style="margin:0;cursor:pointer">📂 Import catalogue<input type="file" accept=".json,.csv" style="display:none" onchange="importCatalogue(this)"></label>
     </div>
-  </div>
-
-  <!-- ─── TIMETABLE UPLOAD ─── -->
-  <div class="card">
-    <h2>📅 Upload timetable <span style="font-size:12px;font-weight:400;color:var(--muted)">(auto-setup)</span></h2>
-    <p style="font-size:12px;color:var(--muted);margin:0 0 10px;line-height:1.5">Upload a CSV or JSON file and all subjects will be created automatically. Download a template below to get started.</p>
-    <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
-      <button class="btn btn-grey btn-sm" style="margin:0" onclick="downloadTTTemplate('csv')">⬇ CSV template</button>
-      <button class="btn btn-grey btn-sm" style="margin:0" onclick="downloadTTTemplate('json')">⬇ JSON template</button>
-    </div>
-    <div class="upload-box" id="tt-drop-zone" onclick="document.getElementById('tt-file-inp').click()">
-      <div class="ub-icon">📁</div>
-      <div class="ub-txt">Tap to choose file, or drag & drop</div>
-      <div class="ub-hint">Accepts .csv or .json</div>
-      <input type="file" id="tt-file-inp" accept=".csv,.json" style="display:none" onchange="handleTTFile(this.files[0])">
-    </div>
-    <div id="tt-preview"></div>
-    <div id="tt-err" class="err hidden"></div>
-    <button class="btn btn-green hidden" id="btn-apply-tt" onclick="applyTimetable()">✓ Apply timetable & add subjects</button>
   </div>
 
 </div>
@@ -1365,6 +1408,87 @@ function downloadTTTemplate(fmt){
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
 }
 
+
+// ═══════════════════════════════════════════
+// PHOTO SCAN — generate AI prompt
+// ═══════════════════════════════════════════
+function handlePhotoFile(file){
+  if(!file) return;
+  var reader=new FileReader();
+  reader.onload=function(e){
+    var img=document.getElementById('photo-preview-img');
+    img.src=e.target.result;
+    img.style.display='block';
+    document.getElementById('photo-preview-icon').style.display='none';
+    document.getElementById('photo-ub-txt').textContent=file.name;
+    document.getElementById('photo-ub-hint').textContent='Tap to change photo';
+  };
+  reader.readAsDataURL(file);
+  buildPhotoPrompt();
+  document.getElementById('photo-file-inp').value='';
+}
+
+function onCsvPaste(){
+  var txt=(document.getElementById('csv-paste-area').value||'').trim();
+  var btn=document.getElementById('btn-download-csv');
+  var err=document.getElementById('csv-paste-err');
+  var ok=document.getElementById('csv-paste-ok');
+  err.classList.add('hidden');
+  ok.classList.add('hidden');
+  if(!txt){ btn.classList.add('hidden'); return; }
+  txt=txt.replace(/^```[a-z]*\n?/i,'').replace(/\n?```$/,'').trim();
+  if(txt.indexOf(',')===-1){ err.textContent='⚠ Doesn\'t look like CSV — paste the AI\'s raw text output.'; err.classList.remove('hidden'); btn.classList.add('hidden'); return; }
+  btn.classList.remove('hidden');
+}
+
+function downloadPastedCSV(){
+  var txt=(document.getElementById('csv-paste-area').value||'').trim();
+  txt=txt.replace(/^```[a-z]*\n?/i,'').replace(/\n?```$/,'').trim();
+  if(!txt) return;
+  var a=document.createElement('a');
+  a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(txt);
+  a.download='timetable.csv';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  document.getElementById('csv-paste-ok').classList.remove('hidden');
+}
+
+function buildPhotoPrompt(){
+  var prompt=
+'I am attaching a photo of a university timetable/schedule. Please read it carefully and convert ALL the information into a CSV file I can import into my attendance tracker app.\n\n'+
+'The CSV must have EXACTLY these columns (first row is header):\n'+
+'code,name,hours,days,start_time,end_time\n\n'+
+'Rules:\n'+
+'- "code" = the subject/course code (e.g. CO2121)\n'+
+'- "name" = the full subject name (e.g. Advanced Mathematics for Computing)\n'+
+'- "hours" = credit hours or session length in hours (use 1 if each timetable slot = 1 hour, 2 if two consecutive slots)\n'+
+'- "days" = the day(s) this subject runs, comma-separated abbreviations: Mon, Tue, Wed, Thu, Fri\n'+
+'  If the SAME subject appears on multiple days, list all days in one row e.g. "Mon,Wed"\n'+
+'  If the subject has DIFFERENT times on different days, create separate rows for each day\n'+
+'- "start_time" = session start time in HH:MM 24h format e.g. 08:30\n'+
+'- "end_time" = session end time in HH:MM 24h format e.g. 10:30\n\n'+
+'Important:\n'+
+'- Skip LUNCH TIME or any non-subject rows\n'+
+'- For practical sessions (e.g. "Practical work on CO2122"), treat them as separate subjects with their own code\n'+
+'- If a subject spans two consecutive 1-hour slots (e.g. 10:30-11:30 and 11:30-12:30), merge into one row with start_time=10:30, end_time=12:30, hours=2\n'+
+'- Do NOT include staff or instructor names in the CSV\n\n'+
+'Output ONLY the raw CSV text. No explanation, no markdown code fences, no extra text. Just the CSV starting with the header row.';
+
+  document.getElementById('photo-prompt-text').value=prompt;
+  document.getElementById('photo-prompt-wrap').style.display='block';
+}
+
+function copyPhotoPrompt(){
+  var txt=document.getElementById('photo-prompt-text').value;
+  if(!txt) return;
+  var ok=function(){ var el=document.getElementById('copy-ok'); el.classList.remove('hidden'); setTimeout(function(){ el.classList.add('hidden'); },2500); };
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(txt).then(ok).catch(function(){
+      document.getElementById('photo-prompt-text').select(); try{document.execCommand('copy');ok();}catch(e){}
+    });
+  } else {
+    document.getElementById('photo-prompt-text').select(); try{document.execCommand('copy');ok();}catch(e){}
+  }
+}
 
 loadDB();
 loadCatalogue();
