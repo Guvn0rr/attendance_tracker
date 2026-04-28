@@ -1,3 +1,4 @@
+
 # 📋 Attendance Tracker
 
 > A simple, lightweight web app to track and manage your class attendance — built for university, school, or any institution.
@@ -34,6 +35,7 @@ When you open the app in Chrome, an install banner appears automatically at the 
 
 <p align="center">
   <img src="img2.jpg" width="250" alt="Install banner appearing at the top of Chrome"/>
+  <img width="572" height="1214" alt="photo_2026-04-28_17-55-18" src="https://github.com/user-attachments/assets/dc67e364-97f8-43f0-b3ed-aaaf7c70c95f" />
   <br/>
   <em>The install banner appears automatically at the top of Chrome</em>
 </p>
