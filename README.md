@@ -52,13 +52,13 @@ If the banner doesn't appear, you can install it manually through Chrome's menu.
 4. Confirm — the app icon will appear on your home screen.
 
 <p align="center">
-  <img src="img1.jpg" width="250" alt="Three-dot menu highlighted in Chrome"/>
+ <img width="572" height="1218" alt="photo_2026-04-28_17-55-20" src="https://github.com/user-attachments/assets/b4352333-e620-44c0-a07d-1bd877ac0fe8" />
   <br/>
   <em>Tap the ⋮ three-dot menu in the top-right corner of Chrome</em>
 </p>
 
 <p align="center">
-  <img src="img3.jpg" width="250" alt="Add to Home screen option in Chrome menu"/>
+  <img width="572" height="1222" alt="photo_2026-04-28_17-55-13" src="https://github.com/user-attachments/assets/e53b5c16-9fb7-478a-b2d6-f25195806fe6" />
   <br/>
   <em>Select "Add to Home screen" from the Chrome menu</em>
 </p>
