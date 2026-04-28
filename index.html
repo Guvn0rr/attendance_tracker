@@ -146,7 +146,7 @@ input:focus,select:focus{border-color:#1a73e8}
       <input type="date" id="inp-start-picker" style="position:absolute;opacity:0;width:0;height:0;pointer-events:none" tabindex="-1">
       <button type="button" id="inp-start-cal" title="Pick a date" style="background:var(--row);border:1px solid var(--inpb);border-radius:7px;padding:7px 9px;cursor:pointer;font-size:15px;line-height:1;color:var(--text);flex-shrink:0">📅</button>
     </div>
-    <label>Number of weeks <span style="color:#aaa;font-weight:400">(optional — how many weeks is your semester?)</span></label>
+    <label>Number of weeks <span style="color:#aaa;font-weight:400">(leave as 0 to track indefinitely)</span></label>
     <input type="number" id="inp-weeks" value="0" min="0" max="60" style="max-width:110px">
   </div>
 
@@ -409,7 +409,8 @@ function renderSimCard(){
 function fmtD(s){ var d=pDate(s),m=d.getMonth()+1,day=d.getDate(); return (m<10?'0'+m:m)+'/'+(day<10?'0'+day:day); }
 function fmtDL(s){ var d=pDate(s),m=d.getMonth()+1,day=d.getDate(),y=d.getFullYear(); return (m<10?'0'+m:m)+'/'+(day<10?'0'+day:day)+'/'+y; }
 function getDow(s){ var d=pDate(s).getDay(); if(d===0||d===6) return null; return DAYS[d-1]; }
-function getWk(s){ if(!db.start) return null; var diff=Math.floor((pDate(s)-pDate(db.start))/(7*864e5)); if(diff<0||diff>=db.weeks) return null; return diff+1; }
+function getWk(s){ if(!db.start) return null; var diff=Math.floor((pDate(s)-pDate(db.start))/(7*864e5)); if(diff<0) return null; if(db.weeks>0&&diff>=db.weeks) return null; return diff+1; }
+function effectiveWeeks(){ if(db.weeks>0) return db.weeks; if(!db.start) return 0; var diff=Math.ceil((pDate(todayS())-pDate(db.start))/(7*864e5))+1; return diff>0?diff:0; }
 function rKey(id,s){ return id+'_'+s; }
 function getRec(id,s){ return db.records[rKey(id,s)]||''; }
 function setRec(id,s,v){ db.records[rKey(id,s)]=v; saveDB(); renderTab(); }
@@ -593,6 +594,7 @@ document.getElementById('btn-start').onclick=function(){
   var raw=document.getElementById('inp-start').value.trim();
   var weeksVal=document.getElementById('inp-weeks').value;
   var weeks=weeksVal!==''?parseInt(weeksVal)||0:0;
+  // 0 means unlimited — kept as 0 in db
   var err=document.getElementById('start-err');
   if(!raw){ showErr('start-err','Enter the semester start date.'); return; }
   // parse mm/dd/yyyy → yyyy-mm-dd
@@ -635,14 +637,15 @@ function clearErr(id){ document.getElementById(id).classList.add('hidden'); }
 // ═══════════════════════════════════════════
 // NAVIGATION
 // ═══════════════════════════════════════════
-function showMain(){
+function showMain(tab){
   document.getElementById('pg-setup').classList.add('hidden');
   document.getElementById('pg-main').classList.remove('hidden');
-  switchTab('today');
+  switchTab(tab||'today');
 }
 
 function switchTab(tab){
   curTab=tab;
+  try{ localStorage.setItem('ltr_tab', tab); } catch(e){}
   ['today','week','all','settings'].forEach(function(t){
     document.getElementById('pg-'+t).classList.toggle('hidden',t!==tab);
     var el=document.getElementById('t-'+t); if(el) el.classList.toggle('on',t===tab);
@@ -670,7 +673,7 @@ function renderToday(){
   db.subjects.forEach(function(s){
     if(db.start){
       var start=pDate(db.start);
-      for(var w=0;w<db.weeks;w++){
+      for(var w=0,_ew=effectiveWeeks();w<_ew;w++){
         s.days.forEach(function(origDay){
           var date=new Date(start);
           var sdow=date.getDay()===0?6:date.getDay()-1;
@@ -821,7 +824,7 @@ function renderAll(){
     var att=0, mis=0, total=0;
     if(db.start){
       var start=pDate(db.start);
-      for(var w=0;w<db.weeks;w++){
+      for(var w=0,_ew=effectiveWeeks();w<_ew;w++){
         s.days.forEach(function(origDay){
           var di=DAYS.indexOf(origDay);
           var date=new Date(start);
@@ -869,7 +872,7 @@ function renderSettings(){
 
   // Semester info
   h+='<div class="card"><h3>Semester</h3>'
-    +'<div style="font-size:13px;color:var(--muted)">Start: <b style="color:var(--text)">'+(db.start?fmtDL(db.start):'—')+'</b> · Weeks: <b style="color:var(--text)">'+db.weeks+'</b></div>'
+    +'<div style="font-size:13px;color:var(--muted)">Start: <b style="color:var(--text)">'+(db.start?fmtDL(db.start):'—')+'</b> · Weeks: <b style="color:var(--text)">'+(db.weeks>0?db.weeks:'Unlimited')+'</b></div>'
     +'<button class="btn btn-outline btn-sm" style="margin-top:10px" onclick="goSetup()">Edit semester & subjects</button>'
     +'</div>';
 
@@ -942,7 +945,7 @@ function goSetup(){
     _ds=_p[1]+'/'+_p[2]+'/'+_p[0];
   }
   document.getElementById('inp-start').value=_ds;
-  document.getElementById('inp-weeks').value=db.weeks||16;
+  document.getElementById('inp-weeks').value=db.weeks>0?db.weeks:0;
   document.getElementById('btn-start').textContent='Save & continue →';
   document.getElementById('setup-note').textContent='Editing your setup — tap "Save & continue" when done.';
   renderSubjList();
@@ -1076,7 +1079,7 @@ function exportTxt(){
   var lines=[], ts=todayS();
   lines.push('=== LECTURE ATTENDANCE EXPORT ===');
   lines.push('Generated: '+new Date().toLocaleString('en-GB'));
-  lines.push('Semester start: '+(db.start?fmtDL(db.start):'—')+' | Weeks: '+db.weeks);
+  lines.push('Semester start: '+(db.start?fmtDL(db.start):'—')+' | Weeks: '+(db.weeks>0?db.weeks:'Unlimited'));
   lines.push('');
 
   // Subject summary
@@ -1087,7 +1090,7 @@ function exportTxt(){
     var att=0,mis=0,total=0;
     if(db.start){
       var start=pDate(db.start);
-      for(var w=0;w<db.weeks;w++){
+      for(var w=0,_ew=effectiveWeeks();w<_ew;w++){
         s.days.forEach(function(origDay){
           var di=DAYS.indexOf(origDay);
           var date=new Date(start);
@@ -1698,7 +1701,9 @@ try{ isDark=localStorage.getItem('ltr_theme')==='dark'; }catch(e){}
 applyTheme();
 
 if(db.start && db.subjects.length){
-  showMain();
+  var _savedTab='today';
+  try{ var _t=localStorage.getItem('ltr_tab'); if(_t&&['today','week','all','settings'].indexOf(_t)!==-1) _savedTab=_t; }catch(e){}
+  showMain(_savedTab);
 } else {
   renderSubjList();
   renderCatalogue();
