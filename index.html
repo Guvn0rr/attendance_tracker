@@ -68,6 +68,8 @@ input:focus,select:focus{border-color:#1a73e8}
 .att-btn{flex:1;padding:11px;border:2px solid var(--faint);border-radius:8px;background:transparent;font-size:13px;font-weight:600;cursor:pointer;text-align:center;color:var(--muted);transition:all .15s}
 .att-btn.yes{background:#e8f5e9;border-color:#1D9E75;color:#1D9E75}
 .att-btn.no{background:#ffebee;border-color:#e53935;color:#e53935}
+.att-btn.nolec{background:#fff8e1;border-color:#f9a825;color:#f9a825}
+.pill-nolec{background:#fff8e1;color:#f9a825}
 .week-nav{display:flex;align-items:center;gap:8px;margin-bottom:12px}
 .week-nav button{padding:7px 13px;border:1px solid var(--wbtnb);border-radius:7px;background:var(--wbtn);cursor:pointer;font-size:13px;color:var(--text)}
 .week-nav span{flex:1;text-align:center;font-size:13px;color:var(--wt);font-weight:500}
@@ -369,8 +371,9 @@ input:focus,select:focus{border-color:#1a73e8}
 // DATA
 // ═══════════════════════════════════════════
 var SK = 'ltr_v6';
+var APP_VERSION = '2.2.3'; // bump this on each release
 var db = {
-  start:'', weeks:16, subjects:[], records:{}, extra:{},
+  start:'', weeks:36, subjects:[], records:{}, extra:{},
   // ttChanges: [{subjId, fromDay, toDay, fromDate, newStart, newEnd}]
   ttChanges:[]
 };
@@ -693,15 +696,17 @@ function renderToday(){
     }
   });
 
-  var attS=0, attH=0;
+  var attS=0, attH=0, noLecS=0;
   Object.keys(db.records).forEach(function(k){
     if(db.records[k]==='attended'){
       var parts=k.split('_'), id=Number(parts[0]), ds=parts.slice(1).join('_');
       var s=db.subjects.find(function(x){ return x.id===id; });
       if(s){ attS++; var ex=db.extra[ds]&&db.extra[ds].find(function(e){ return e.id===id; }); attH+=ex?ex.hours:s.hours; }
+    } else if(db.records[k]==='nolecture'){
+      noLecS++;
     }
   });
-  var rate=totalP>0?Math.round(attS/totalP*100):0;
+  var rate=totalP>0?Math.round(attS/Math.max(1,totalP-noLecS)*100):0;
 
   var h='<div class="stat-row">'
     +'<div class="stat-box"><div class="val">'+(wk?'Wk '+wk:'—')+'</div><div class="lbl">Current week</div></div>'
@@ -709,7 +714,7 @@ function renderToday(){
     +'<div class="stat-box"><div class="val">'+fmtH(attH)+'</div><div class="lbl">Hours attended</div></div>'
     +'<div class="stat-box"><div class="val" style="color:#1a73e8">'+(totalP>0?rate+'%':'—')+'</div><div class="lbl">Attendance rate</div></div>'
     +'</div>'
-    +'<div class="pbar-wrap"><div style="display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:4px"><span>Overall</span><span>'+attS+' / '+totalP+' sessions</span></div>'
+    +'<div class="pbar-wrap"><div style="display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:4px"><span>Overall</span><span>'+attS+' / '+(totalP-noLecS)+' sessions'+(noLecS?' ('+noLecS+' no lecture)':'')+'</span></div>'
     +'<div class="pbar"><div class="pfill" style="width:'+rate+'%"></div></div></div>';
 
   // Day header + add button
@@ -745,6 +750,7 @@ function renderToday(){
         +'<div class="att-btns">'
         +'<div class="att-btn'+(rec==='attended'?' yes':'')+'" onclick="setRec('+s.id+',\''+ts+'\',\'attended\')">✓ Attended</div>'
         +'<div class="att-btn'+(rec==='missed'?' no':'')+'" onclick="setRec('+s.id+',\''+ts+'\',\'missed\')">✗ Missed</div>'
+        +'<div class="att-btn'+(rec==='nolecture'?' nolec':'')+'" onclick="setRec('+s.id+',\''+ts+'\',\'nolecture\')" title="Lecture was not held — excluded from attendance rate">— No Lecture</div>'
         +'</div>';
       if(sess.isExtra){
         h+='<div style="margin-top:8px;text-align:right"><button class="btn btn-red btn-sm" style="font-size:11px;padding:4px 10px" onclick="removeExtraSubj('+s.id+',\''+ts+'\')">Remove</button></div>';
@@ -793,8 +799,8 @@ function renderWeek(){
     else {
       sessions.forEach(function(sess){
         var s=sess.subj, rec=getRec(s.id,ds);
-        var pill=rec==='attended'?'pill-att':rec==='missed'?'pill-mis':'pill-pend';
-        var ptxt=rec==='attended'?'Attended':rec==='missed'?'Missed':isPast?'No record':'Upcoming';
+        var pill=rec==='attended'?'pill-att':rec==='missed'?'pill-mis':rec==='nolecture'?'pill-nolec':'pill-pend';
+        var ptxt=rec==='attended'?'Attended':rec==='missed'?'Missed':rec==='nolecture'?'No Lecture':isPast?'No record':'Upcoming';
         var timeStr=fmtTime(sess.time);
         var badge=sess.isExtra?'<span class="extra-tag">Extra</span>':sess.wasMoved?'<span class="moved-tag">Moved</span>':'';
         h+='<div class="w-row"><div class="wname">'+esc(s.code)+badge+'<div class="wsub">'+(s.name?esc(s.name)+' · ':'')+fmtH(s.hours)+(timeStr?' · '+timeStr:'')+'</div></div>';
@@ -802,6 +808,7 @@ function renderWeek(){
           h+='<div style="display:flex;gap:5px;align-items:center">'
             +'<div class="att-btn'+(rec==='attended'?' yes':'')+'" style="padding:5px 10px;font-size:12px;border-width:1.5px" onclick="setRec('+s.id+',\''+ds+'\',\'attended\')">&#10003;</div>'
             +'<div class="att-btn'+(rec==='missed'?' no':'')+'" style="padding:5px 10px;font-size:12px;border-width:1.5px" onclick="setRec('+s.id+',\''+ds+'\',\'missed\')">&#10007;</div>'
+            +'<div class="att-btn'+(rec==='nolecture'?' nolec':'')+'" style="padding:5px 7px;font-size:11px;border-width:1.5px;line-height:1.2" onclick="setRec('+s.id+',\''+ds+'\',\'nolecture\')" title="No lecture held">—</div>'
             +(sess.isExtra?'<button class="btn btn-red btn-sm" style="font-size:11px;padding:4px 8px;margin:0" onclick="removeExtraSubj('+s.id+',\''+ds+'\')">&times;</button>':'')
             +'</div>';
         } else { h+='<span class="pill '+pill+'">'+ptxt+'</span>'; }
@@ -835,7 +842,7 @@ function renderAll(){
           var effDi=DAYS.indexOf(effDay);
           var effDate=new Date(date); effDate.setDate(effDate.getDate()+(effDi-di));
           var effDs=dStr(effDate);
-          if(effDs<=ts){ total++; var r=getRec(s.id,effDs); if(r==='attended') att++; else if(r==='missed') mis++; }
+          if(effDs<=ts){ total++; var r=getRec(s.id,effDs); if(r==='attended') att++; else if(r==='missed') mis++; else if(r==='nolecture') total--; }
         });
       }
     }
@@ -843,7 +850,7 @@ function renderAll(){
     Object.keys(db.extra).forEach(function(ds){
       if(ds>ts) return;
       var e=(db.extra[ds]||[]).find(function(e){ return e.id===s.id; });
-      if(e){ total++; var r=getRec(s.id,ds); if(r==='attended') att++; else if(r==='missed') mis++; }
+      if(e){ total++; var r=getRec(s.id,ds); if(r==='attended') att++; else if(r==='missed') mis++; else if(r==='nolecture') total--; }
     });
     var rate=total>0?Math.round(att/total*100):0;
     // show days including any moves
@@ -881,6 +888,18 @@ function renderSettings(){
     +'<button class="btn btn-outline" onclick="exportTxt()">📄 Export attendance as .txt</button>'
     +'</div>';
 
+  // Backup & Restore
+  h+='<div class="card" style="border-color:#1D9E75">'
+    +'<h3 style="color:#1D9E75">💾 Backup & Restore</h3>'
+    +'<p style="font-size:12px;color:var(--muted);margin:0 0 10px;line-height:1.5">Save all your data to a <b>.json</b> backup file. If you reinstall or switch devices, import this file to continue from where you left off.</p>'
+    +'<div id="backup-auto-status" style="font-size:11px;color:var(--muted);margin-bottom:8px"></div>'
+    +'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">'
+    +'<button class="btn btn-green btn-sm" style="margin:0" onclick="exportBackup()">⬇ Download backup now</button>'
+    +'<label class="btn btn-outline btn-sm" style="margin:0;cursor:pointer">⬆ Restore from backup<input type="file" accept=".json" style="display:none" onchange="importBackup(this)"></label>'
+    +'</div>'
+    +'<div id="backup-restore-msg" class="hidden" style="font-size:12px;margin-top:4px"></div>'
+    +'</div>';
+
   // Timetable changes — tucked away
   h+='<div class="card" style="border-color:#f39c12">'
     +'<h3 style="color:#e65100">⚠ Timetable changes</h3>'
@@ -916,6 +935,14 @@ function renderSettings(){
     +'</div>'
     +'</div>';
 
+  // Update checker
+  h+='<div class="card" id="update-card">'
+    +'<h3>Updates</h3>'
+    +'<div style="font-size:12px;color:var(--muted);margin-bottom:8px">Current version: <b style="color:var(--text)">'+APP_VERSION+'</b></div>'
+    +'<button class="btn btn-outline" onclick="checkForUpdate()">🔄 Check for updates</button>'
+    +'<div id="update-status" style="margin-top:8px;font-size:12px"></div>'
+    +'</div>';
+
   // Hard Reset
   h+='<div class="card" style="border-color:#e53935">'
     +'<h3 style="color:#e53935">Reset</h3>'
@@ -925,6 +952,7 @@ function renderSettings(){
   el.innerHTML=h;
   renderSimCard();
   if(_simDate) document.getElementById('sim-date-inp').value=_simDate;
+  renderBackupStatus();
 }
 
 function stepSimDate(days){
@@ -933,6 +961,32 @@ function stepSimDate(days){
   d.setDate(d.getDate()+days);
   setSimDate(dStr(d));
   document.getElementById('sim-date-inp').value=todayS();
+}
+
+// ═══════════════════════════════════════════
+// UPDATE CHECKER
+// ═══════════════════════════════════════════
+function checkForUpdate(){
+  var el=document.getElementById('update-status');
+  if(!el) return;
+  el.innerHTML='<span style="color:var(--muted)">⏳ Checking for updates…</span>';
+  var RAW_URL='https://raw.githubusercontent.com/Guvn0rr/AttendanceTracker/main/index.html';
+  fetch(RAW_URL+'?nocache='+Date.now())
+    .then(function(r){ return r.text(); })
+    .then(function(txt){
+      var m=txt.match(/var APP_VERSION\s*=\s*'([^']+)'/);
+      if(!m){ el.innerHTML='<span style="color:#e65100">⚠ Could not read version from server.</span>'; return; }
+      var remote=m[1];
+      if(remote===APP_VERSION){
+        el.innerHTML='<span style="color:#1D9E75">✓ You\'re on the latest version ('+remote+').</span>';
+      } else {
+        el.innerHTML='<span style="color:#1a73e8">🆕 New version available: <b>'+remote+'</b> (you have '+APP_VERSION+').'
+          +'<br>Open <a href="https://github.com/Guvn0rr/AttendanceTracker" target="_blank" style="color:#1a73e8">the repo</a> and refresh the app to update.</span>';
+      }
+    })
+    .catch(function(){
+      el.innerHTML='<span style="color:#e53935">✗ Could not reach update server. Check your connection.</span>';
+    });
 }
 
 function goSetup(){
@@ -1101,14 +1155,14 @@ function exportTxt(){
           var effDi=DAYS.indexOf(effDay);
           var effDate=new Date(date); effDate.setDate(effDate.getDate()+(effDi-di));
           var effDs=dStr(effDate);
-          if(effDs<=ts){ total++; var r=getRec(s.id,effDs); if(r==='attended') att++; else if(r==='missed') mis++; }
+          if(effDs<=ts){ total++; var r=getRec(s.id,effDs); if(r==='attended') att++; else if(r==='missed') mis++; else if(r==='nolecture') total--; }
         });
       }
     }
     Object.keys(db.extra).forEach(function(ds){
       if(ds>ts) return;
       var e=(db.extra[ds]||[]).find(function(e){ return e.id===s.id; });
-      if(e){ total++; var r=getRec(s.id,ds); if(r==='attended') att++; else if(r==='missed') mis++; }
+      if(e){ total++; var r=getRec(s.id,ds); if(r==='attended') att++; else if(r==='missed') mis++; else if(r==='nolecture') total--; }
     });
     var rate=total>0?Math.round(att/total*100)+'%':'—';
     lines.push(' '+s.code+(s.name?' ('+s.name+')':''));
@@ -1136,7 +1190,7 @@ function exportTxt(){
     if(!sessions.length){ lines.push('   (no sessions)'); return; }
     sessions.forEach(function(sess){
       var rec=getRec(sess.subj.id,ds);
-      var status=rec==='attended'?'✓ Attended':rec==='missed'?'✗ Missed':'- No record';
+      var status=rec==='attended'?'✓ Attended':rec==='missed'?'✗ Missed':rec==='nolecture'?'— No Lecture':'- No record';
       var tag=sess.isExtra?' [extra]':sess.wasMoved?' [moved]':'';
       var timeStr=fmtTime(sess.time);
       lines.push('   '+sess.subj.code+(sess.subj.name?' - '+sess.subj.name:'')+tag+': '+status
@@ -1152,6 +1206,131 @@ function exportTxt(){
   a.href=URL.createObjectURL(blob);
   a.download='attendance_'+ts+'.txt';
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
+}
+
+// ═══════════════════════════════════════════
+// BACKUP & RESTORE
+// ═══════════════════════════════════════════
+var BACKUP_DATE_SK = 'ltr_last_backup_date';
+
+function getBackupPayload(){
+  return {
+    _backupVersion: 1,
+    _exportedAt: new Date().toISOString(),
+    db: db,
+    catalogue: catalogue,
+    theme: isDark ? 'dark' : 'light'
+  };
+}
+
+function exportBackup(){
+  var payload = JSON.stringify(getBackupPayload(), null, 2);
+  var ts = todayS();
+  var blob = new Blob([payload], {type: 'application/json'});
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'attendance_backup_' + ts + '.json';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  // Record last backup date
+  try { localStorage.setItem(BACKUP_DATE_SK, ts); } catch(e){}
+  renderBackupStatus();
+}
+
+function renderBackupStatus(){
+  var el = document.getElementById('backup-auto-status');
+  if(!el) return;
+  var lastDate = '';
+  try { lastDate = localStorage.getItem(BACKUP_DATE_SK) || ''; } catch(e){}
+  if(lastDate){
+    var daysAgo = Math.floor((pDate(todayS()) - pDate(lastDate)) / 864e5);
+    var label = daysAgo === 0 ? 'today' : daysAgo === 1 ? 'yesterday' : daysAgo + ' days ago';
+    el.innerHTML = '📅 Last backup: <b style="color:var(--text)">' + fmtDL(lastDate) + '</b> (' + label + ')';
+    if(daysAgo >= 7){
+      el.innerHTML += ' <span style="color:#e65100;font-weight:600">— overdue!</span>';
+    }
+  } else {
+    el.innerHTML = '<span style="color:#e65100">⚠ No backup made yet — download one now to keep your data safe.</span>';
+  }
+}
+
+function importBackup(inp){
+  var file = inp.files[0]; if(!file) return;
+  var msgEl = document.getElementById('backup-restore-msg');
+  var r = new FileReader();
+  r.onload = function(e){
+    try{
+      var payload = JSON.parse(e.target.result);
+      if(!payload._backupVersion || !payload.db){
+        throw new Error('Not a valid backup file. Make sure you choose the file downloaded from "Download backup now".');
+      }
+      var restoredDb = payload.db;
+      // Validate required fields
+      if(typeof restoredDb !== 'object' || !Array.isArray(restoredDb.subjects)){
+        throw new Error('Backup file appears corrupted (missing subjects list).');
+      }
+      if(!confirm('Restore backup from ' + (payload._exportedAt ? new Date(payload._exportedAt).toLocaleString('en-GB') : 'unknown date') + '?\n\nThis will REPLACE all current data. Make sure to download a backup of your current data first if needed.')){
+        inp.value=''; return;
+      }
+      // Restore db
+      db = restoredDb;
+      if(!db.extra) db.extra = {};
+      if(!db.ttChanges) db.ttChanges = [];
+      saveDB();
+      // Restore catalogue
+      if(Array.isArray(payload.catalogue)){
+        catalogue = payload.catalogue;
+        saveCatalogue();
+      }
+      // Restore theme
+      if(payload.theme){
+        isDark = payload.theme === 'dark';
+        applyTheme();
+        try { localStorage.setItem('ltr_theme', payload.theme); } catch(ex){}
+      }
+      msgEl.textContent = '✓ Backup restored successfully! Your data has been recovered.';
+      msgEl.style.color = '#1D9E75';
+      msgEl.classList.remove('hidden');
+      // Navigate appropriately
+      if(db.start && db.subjects.length){
+        showMain('settings');
+      }
+      setTimeout(function(){ renderSettings(); }, 100);
+    } catch(err){
+      msgEl.textContent = '✗ Restore failed: ' + err.message;
+      msgEl.style.color = '#e53935';
+      msgEl.classList.remove('hidden');
+    }
+    inp.value = '';
+  };
+  r.readAsText(file);
+}
+
+// Auto daily backup reminder: on page load check if a day has passed since last backup
+// and show a notification banner if data exists and no backup today
+function checkAutoDailyBackup(){
+  if(!db.start || !db.subjects.length) return; // no data to back up
+  var lastDate = '';
+  try { lastDate = localStorage.getItem(BACKUP_DATE_SK) || ''; } catch(e){}
+  var ts = todayS();
+  if(lastDate === ts) return; // already backed up today
+  var daysAgo = lastDate ? Math.floor((pDate(ts) - pDate(lastDate)) / 864e5) : 999;
+  // Only show banner if it's been at least 1 day (or never)
+  if(daysAgo < 1) return;
+  // Show banner
+  var existing = document.getElementById('backup-banner');
+  if(existing) return;
+  var banner = document.createElement('div');
+  banner.id = 'backup-banner';
+  banner.style.cssText = 'position:fixed;bottom:0;left:0;right:0;z-index:300;background:#1D9E75;color:#fff;padding:10px 14px;display:flex;align-items:center;gap:10px;font-size:13px;font-weight:600;max-width:520px;margin:0 auto;border-radius:12px 12px 0 0;box-shadow:0 -2px 12px rgba(0,0,0,.2)';
+  banner.innerHTML = '<span style="flex:1">💾 ' + (daysAgo >= 999 ? 'Back up your data to keep it safe!' : 'Daily backup reminder — last backup ' + daysAgo + ' day' + (daysAgo!==1?'s':'') + ' ago') + '</span>'
+    + '<button onclick="exportBackup();dismissBackupBanner()" style="background:#fff;color:#1D9E75;border:none;border-radius:6px;padding:5px 11px;font-size:12px;font-weight:700;cursor:pointer">Backup now</button>'
+    + '<button onclick="dismissBackupBanner()" style="background:transparent;border:none;color:#fff;font-size:18px;cursor:pointer;padding:0 4px;line-height:1">×</button>';
+  document.body.appendChild(banner);
+}
+
+function dismissBackupBanner(){
+  var el = document.getElementById('backup-banner');
+  if(el) el.remove();
 }
 
 // ═══════════════════════════════════════════
@@ -1711,6 +1890,7 @@ if(db.start && db.subjects.length){
 }
 
 try{ buildPhotoPrompt(); }catch(e){}
+try{ checkAutoDailyBackup(); }catch(e){}
 </script>
 </body>
 </html>
