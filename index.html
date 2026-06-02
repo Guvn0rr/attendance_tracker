@@ -1037,7 +1037,7 @@ function openAddToday(ds){
 
 function confirmAddToday(){
   var ds=_addTodayDate||todayS();
-  var id=parseInt(document.getElementById('at-subj').value);
+  var id=parseFloat(document.getElementById('at-subj').value);
   var hrs=parseFloat(document.getElementById('at-hrs').value)||2;
   if(!id||isNaN(id)){ showErr('at-err','Select a subject.'); return; }
   if(hrs<=0){ showErr('at-err','Enter valid hours.'); return; }
