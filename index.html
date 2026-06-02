@@ -1578,7 +1578,20 @@ function applyTimetable(){
   if(!_ttParsed.length) return;
   var added=0, skipped=0;
   _ttParsed.forEach(function(s){
-    if(db.subjects.find(function(x){ return x.code===s.code; })){ skipped++; return; }
+    var existing=db.subjects.find(function(x){ return x.code===s.code; });
+    if(existing){
+      var merged=false;
+      s.days.forEach(function(d){
+        if(existing.days.indexOf(d)<0){
+          existing.days.push(d);
+          if(!existing.times) existing.times={};
+          if(s.times&&s.times[d]) existing.times[d]=s.times[d];
+          merged=true;
+        }
+      });
+      if(merged){ added++; } else { skipped++; }
+      return;
+    }
     db.subjects.push({id:Date.now()+Math.random(),code:s.code,name:s.name,hours:s.hours,days:s.days,times:s.times});
     added++;
     // also add to catalogue if not present
@@ -1734,7 +1747,20 @@ function importShareCode(){
     if(!parsed.length) throw new Error('Could not find any valid subjects in the code.');
     var added=0, skipped=0;
     parsed.forEach(function(s){
-      if(db.subjects.find(function(x){ return x.code===s.code; })){ skipped++; return; }
+      var existing=db.subjects.find(function(x){ return x.code===s.code; });
+    if(existing){
+      var merged=false;
+      s.days.forEach(function(d){
+        if(existing.days.indexOf(d)<0){
+          existing.days.push(d);
+          if(!existing.times) existing.times={};
+          if(s.times&&s.times[d]) existing.times[d]=s.times[d];
+          merged=true;
+        }
+      });
+      if(merged){ added++; } else { skipped++; }
+      return;
+    }
       db.subjects.push({id:Date.now()+Math.random(),code:s.code,name:s.name,hours:s.hours,days:s.days,times:s.times});
       added++;
       if(!catalogue.find(function(c){ return c.code===s.code; })) catalogue.push({code:s.code,name:s.name});
@@ -1815,7 +1841,20 @@ function applyAiCsv(){
   if(!_ttParsed.length) return;
   var added=0, skipped=0;
   _ttParsed.forEach(function(s){
-    if(db.subjects.find(function(x){ return x.code===s.code; })){ skipped++; return; }
+    var existing=db.subjects.find(function(x){ return x.code===s.code; });
+    if(existing){
+      var merged=false;
+      s.days.forEach(function(d){
+        if(existing.days.indexOf(d)<0){
+          existing.days.push(d);
+          if(!existing.times) existing.times={};
+          if(s.times&&s.times[d]) existing.times[d]=s.times[d];
+          merged=true;
+        }
+      });
+      if(merged){ added++; } else { skipped++; }
+      return;
+    }
     db.subjects.push({id:Date.now()+Math.random(),code:s.code,name:s.name,hours:s.hours,days:s.days,times:s.times});
     added++;
     if(!catalogue.find(function(c){ return c.code===s.code; })) catalogue.push({code:s.code,name:s.name});
