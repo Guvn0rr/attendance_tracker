@@ -727,11 +727,7 @@ function renderToday(){
     +'</div>';
 
   if(wk&&dow){
-    var nonToday=db.subjects.filter(function(s){
-      var alreadyIds=sessions.map(function(x){ return x.subj.id; });
-      return alreadyIds.indexOf(s.id)<0;
-    });
-    if(nonToday.length) h+='<button class="btn btn-purple btn-sm" onclick="openAddToday()">+ Add</button>';
+    if(wk&&dow&&db.subjects.length) h+='<button class="btn btn-purple btn-sm" onclick="openAddToday()">+ Add</button>';
   }
   h+='</div>';
 
