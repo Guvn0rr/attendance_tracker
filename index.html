@@ -324,7 +324,7 @@ input:focus,select:focus{border-color:#1a73e8}
     <button class="sheet-close" onclick="closeModal('modal-add-today')">×</button>
     <h3 id="at-modal-title">Add subject to today</h3>
     <label>Select subject</label>
-    <select id="at-subj" onchange="(function(){ var s=db.subjects.find(function(x){ return x.id===parseInt(document.getElementById('at-subj').value); }); if(s) document.getElementById('at-hrs').value=s.hours; })()"></select>
+    <select id="at-subj"></select>
     <label>Hours for this session</label>
     <input type="number" id="at-hrs" value="2" min="0.5" step="0.5">
     <div id="at-err" class="err hidden"></div>
@@ -726,8 +726,12 @@ function renderToday(){
     +(wk?'<span class="today-tag">Wk '+wk+'</span>':'')
     +'</div>';
 
-  if(wk&&dow&&db.subjects.length){
-    h+='<button class="btn btn-purple btn-sm" onclick="openAddToday()">+ Add</button>';
+  if(wk&&dow){
+    var nonToday=db.subjects.filter(function(s){
+      var alreadyIds=sessions.map(function(x){ return x.subj.id; });
+      return alreadyIds.indexOf(s.id)<0;
+    });
+    if(nonToday.length) h+='<button class="btn btn-purple btn-sm" onclick="openAddToday()">+ Add</button>';
   }
   h+='</div>';
 
@@ -736,9 +740,7 @@ function renderToday(){
   else if(!sessions.length){ h+='<p style="color:var(--muted);text-align:center;padding:20px 0">No lectures scheduled today.</p>'; }
   else {
     sessions.forEach(function(sess){
-      var s=sess.subj;
-      var recKey=sess.isExtra?sess.extraUid:s.id;
-      var rec=getRec(recKey,ts);
+      var s=sess.subj, rec=getRec(s.id,ts);
       var timeStr=fmtTime(sess.time);
       var badges='';
       if(sess.isExtra) badges+='<span class="extra-tag">Extra</span>';
@@ -747,12 +749,12 @@ function renderToday(){
         +'<h4>'+esc(s.code)+badges+'</h4>'
         +'<div class="sub">'+(s.name?esc(s.name)+' · ':'')+fmtH(s.hours)+(timeStr?' · '+timeStr:'')+'</div>'
         +'<div class="att-btns">'
-        +'<div class="att-btn'+(rec==='attended'?' yes':'')+'" onclick="setRec('+recKey+',\''+ts+'\',\'attended\')">✓ Attended</div>'
-        +'<div class="att-btn'+(rec==='missed'?' no':'')+'" onclick="setRec('+recKey+',\''+ts+'\',\'missed\')">✗ Missed</div>'
-        +'<div class="att-btn'+(rec==='nolecture'?' nolec':'')+'" onclick="setRec('+recKey+',\''+ts+'\',\'nolecture\')" title="Lecture was not held — excluded from attendance rate">— No Lecture</div>'
+        +'<div class="att-btn'+(rec==='attended'?' yes':'')+'" onclick="setRec('+s.id+',\''+ts+'\',\'attended\')">✓ Attended</div>'
+        +'<div class="att-btn'+(rec==='missed'?' no':'')+'" onclick="setRec('+s.id+',\''+ts+'\',\'missed\')">✗ Missed</div>'
+        +'<div class="att-btn'+(rec==='nolecture'?' nolec':'')+'" onclick="setRec('+s.id+',\''+ts+'\',\'nolecture\')" title="Lecture was not held — excluded from attendance rate">— No Lecture</div>'
         +'</div>';
       if(sess.isExtra){
-        h+='<div style="margin-top:8px;text-align:right"><button class="btn btn-red btn-sm" style="font-size:11px;padding:4px 10px" onclick="removeExtraSubj('+sess.extraUid+',\''+ts+'\')">Remove</button></div>';
+        h+='<div style="margin-top:8px;text-align:right"><button class="btn btn-red btn-sm" style="font-size:11px;padding:4px 10px" onclick="removeExtraSubj(\''+sess.extraUid+'\',\''+ts+'\')">Remove</button></div>';
       }
       h+='</div>';
     });
@@ -797,9 +799,7 @@ function renderWeek(){
     if(!sessions.length||!wk){ h+='<p style="font-size:12px;color:var(--faint);margin:4px 0 0">No lectures</p>'; }
     else {
       sessions.forEach(function(sess){
-        var s=sess.subj;
-        var recKey=sess.isExtra?sess.extraUid:s.id;
-        var rec=getRec(recKey,ds);
+        var s=sess.subj, rec=getRec(s.id,ds);
         var pill=rec==='attended'?'pill-att':rec==='missed'?'pill-mis':rec==='nolecture'?'pill-nolec':'pill-pend';
         var ptxt=rec==='attended'?'Attended':rec==='missed'?'Missed':rec==='nolecture'?'No Lecture':isPast?'No record':'Upcoming';
         var timeStr=fmtTime(sess.time);
@@ -807,10 +807,10 @@ function renderWeek(){
         h+='<div class="w-row"><div class="wname">'+esc(s.code)+badge+'<div class="wsub">'+(s.name?esc(s.name)+' · ':'')+fmtH(s.hours)+(timeStr?' · '+timeStr:'')+'</div></div>';
         if(isToday||isPast){
           h+='<div style="display:flex;gap:5px;align-items:center">'
-            +'<div class="att-btn'+(rec==='attended'?' yes':'')+'" style="padding:5px 10px;font-size:12px;border-width:1.5px" onclick="setRec('+recKey+',\''+ds+'\',\'attended\')">&#10003;</div>'
-            +'<div class="att-btn'+(rec==='missed'?' no':'')+'" style="padding:5px 10px;font-size:12px;border-width:1.5px" onclick="setRec('+recKey+',\''+ds+'\',\'missed\')">&#10007;</div>'
-            +'<div class="att-btn'+(rec==='nolecture'?' nolec':'')+'" style="padding:5px 7px;font-size:11px;border-width:1.5px;line-height:1.2" onclick="setRec('+recKey+',\''+ds+'\',\'nolecture\')" title="No lecture held">—</div>'
-            +(sess.isExtra?'<button class="btn btn-red btn-sm" style="font-size:11px;padding:4px 8px;margin:0" onclick="removeExtraSubj('+sess.extraUid+',\''+ds+'\')">&times;</button>':'')
+            +'<div class="att-btn'+(rec==='attended'?' yes':'')+'" style="padding:5px 10px;font-size:12px;border-width:1.5px" onclick="setRec('+s.id+',\''+ds+'\',\'attended\')">&#10003;</div>'
+            +'<div class="att-btn'+(rec==='missed'?' no':'')+'" style="padding:5px 10px;font-size:12px;border-width:1.5px" onclick="setRec('+s.id+',\''+ds+'\',\'missed\')">&#10007;</div>'
+            +'<div class="att-btn'+(rec==='nolecture'?' nolec':'')+'" style="padding:5px 7px;font-size:11px;border-width:1.5px;line-height:1.2" onclick="setRec('+s.id+',\''+ds+'\',\'nolecture\')" title="No lecture held">—</div>'
+            +(sess.isExtra?'<button class="btn btn-red btn-sm" style="font-size:11px;padding:4px 8px;margin:0" onclick="removeExtraSubj(\''+sess.extraUid+'\',\''+ds+'\')">&times;</button>':'')
             +'</div>';
         } else { h+='<span class="pill '+pill+'">'+ptxt+'</span>'; }
         h+='</div>';
@@ -850,13 +850,8 @@ function renderAll(){
     // extra sessions
     Object.keys(db.extra).forEach(function(ds){
       if(ds>ts) return;
-      (db.extra[ds]||[]).forEach(function(e){
-        if(e.id!==s.id) return;
-        total++;
-        var uid=e.uid||e.id;
-        var r=getRec(uid,ds);
-        if(r==='attended') att++; else if(r==='missed') mis++; else if(r==='nolecture') total--;
-      });
+      var e=(db.extra[ds]||[]).find(function(e){ return e.id===s.id; });
+      if(e){ total++; var r=getRec(s.id,ds); if(r==='attended') att++; else if(r==='missed') mis++; else if(r==='nolecture') total--; }
     });
     var rate=total>0?Math.round(att/total*100):0;
     // show days including any moves
@@ -1029,15 +1024,13 @@ function resetAll(){
 var _addTodayDate='';
 function openAddToday(ds){
   _addTodayDate=ds||todayS();
-  if(!db.subjects.length){ alert('No subjects set up yet.'); return; }
-  // IDs already in the regular timetable for this day (not extras)
-  var regularIds=subjsFor(_addTodayDate).map(function(x){ return x.subj.id; });
-  // Only show subjects NOT already in the regular schedule
-  var available=db.subjects.filter(function(s){ return regularIds.indexOf(s.id)<0; });
-  if(!available.length){ alert('All subjects are already scheduled for this day.'); return; }
+  var available=db.subjects;
+  if(!available.length){ alert('No subjects set up yet.'); return; }
+  var currentIds=allSessionsFor(_addTodayDate).map(function(x){ return x.subj.id; });
   var sel=document.getElementById('at-subj');
   sel.innerHTML=available.map(function(s){
-    return '<option value="'+s.id+'">'+esc(s.code)+(s.name?' — '+esc(s.name):'')+'</option>';
+    var alreadyIn=currentIds.indexOf(s.id)>=0;
+    return '<option value="'+s.id+'">'+esc(s.code)+(s.name?' — '+esc(s.name):'')+(alreadyIn?' (already scheduled)':'')+'</option>';
   }).join('');
   document.getElementById('at-hrs').value=available[0].hours;
   var isToday=_addTodayDate===todayS();
@@ -1052,12 +1045,8 @@ function confirmAddToday(){
   var hrs=parseFloat(document.getElementById('at-hrs').value)||2;
   if(!id||isNaN(id)){ showErr('at-err','Select a subject.'); return; }
   if(hrs<=0){ showErr('at-err','Enter valid hours.'); return; }
-  // Prevent adding if already an extra session for this subject on this day
-  if(db.extra[ds]&&db.extra[ds].find(function(e){ return e.id===id; })){
-    showErr('at-err','This subject is already added as an extra session today.'); return;
-  }
   if(!db.extra[ds]) db.extra[ds]=[];
-  db.extra[ds].push({id:id,hours:hrs,uid:Date.now()+Math.random()});
+  db.extra[ds].push({id:id,hours:hrs,uid:'u'+Date.now()+(Math.random()*1e6|0)});
   saveDB(); closeModal('modal-add-today'); renderTab();
 }
 
@@ -1173,13 +1162,8 @@ function exportTxt(){
     }
     Object.keys(db.extra).forEach(function(ds){
       if(ds>ts) return;
-      (db.extra[ds]||[]).forEach(function(e){
-        if(e.id!==s.id) return;
-        total++;
-        var uid=e.uid||e.id;
-        var r=getRec(uid,ds);
-        if(r==='attended') att++; else if(r==='missed') mis++; else if(r==='nolecture') total--;
-      });
+      var e=(db.extra[ds]||[]).find(function(e){ return e.id===s.id; });
+      if(e){ total++; var r=getRec(s.id,ds); if(r==='attended') att++; else if(r==='missed') mis++; else if(r==='nolecture') total--; }
     });
     var rate=total>0?Math.round(att/total*100)+'%':'—';
     lines.push(' '+s.code+(s.name?' ('+s.name+')':''));
@@ -1206,8 +1190,7 @@ function exportTxt(){
     var sessions=allSessionsFor(ds);
     if(!sessions.length){ lines.push('   (no sessions)'); return; }
     sessions.forEach(function(sess){
-      var recKey=sess.isExtra?sess.extraUid:sess.subj.id;
-      var rec=getRec(recKey,ds);
+      var rec=getRec(sess.subj.id,ds);
       var status=rec==='attended'?'✓ Attended':rec==='missed'?'✗ Missed':rec==='nolecture'?'— No Lecture':'- No record';
       var tag=sess.isExtra?' [extra]':sess.wasMoved?' [moved]':'';
       var timeStr=fmtTime(sess.time);
